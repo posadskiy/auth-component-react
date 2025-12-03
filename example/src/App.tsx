@@ -15,9 +15,9 @@ function App() {
 
   // Get API URLs from environment or use defaults
   // Login uses auth-service on port 8100
-  const loginApiUrl = process.env.REACT_APP_LOGIN_API_URL || 'http://localhost:8100/login';
+  const loginApiUrl = import.meta.env.VITE_LOGIN_API_URL || 'http://localhost:8100/login';
   // Registration uses user-service on port 8095
-  const registerApiUrl = process.env.REACT_APP_REGISTER_API_URL || 'http://localhost:8095/signup';
+  const registerApiUrl = import.meta.env.VITE_REGISTER_API_URL || 'http://localhost:8095/signup';
 
   const handleLoginSuccess = (response: any) => {
     console.log('Login successful:', response);
