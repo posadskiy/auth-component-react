@@ -1,0 +1,35 @@
+# Source files (only dist should be published)
+src/
+example/
+*.ts
+*.tsx
+!dist/**/*.d.ts
+
+# Development files
+.git/
+.gitignore
+.npmignore
+tsconfig.json
+package-lock.json
+
+# Documentation (keep README.md)
+# README.md
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+coverage/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Build tools
+.eslintrc*
+.prettierrc*
+
+
