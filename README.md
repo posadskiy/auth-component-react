@@ -151,6 +151,25 @@ function RegisterPage() {
 }
 ```
 
+### Enabling OAuth providers
+
+OAuth buttons render only when you pass provider flags. If no flags are set, the forms fall back to username/password only.
+
+```tsx
+<Login
+  apiUrl="http://localhost:8100/login"
+  oauthApiUrl="http://localhost:8100"
+  enableOAuth
+  enableApple
+  enableMicrosoft
+  enableGithub
+  enableDiscord
+  onSuccess={(res) => console.log(res)}
+/>
+```
+
+> Use `oauthApiUrl` to point to your backend base (without `/login` or `/signup`). Authorize requests go to `${oauthApiUrl}/oauth2/authorize/{provider}`.
+
 ## Props
 
 ### Login Component
@@ -159,6 +178,14 @@ function RegisterPage() {
 |------|------|----------|---------|-------------|
 | `apiUrl` | `string` | No* | - | Base URL for the authentication API |
 | `authApi` | `AuthApi` | No* | - | Custom API functions object |
+| `oauthApiUrl` | `string` | No | - | Base URL for OAuth endpoints (defaults to `apiUrl` without `/login`) |
+| `enableOAuth` | `boolean` | No | `true` | Master toggle for showing OAuth buttons |
+| `enableGoogle` | `boolean` | No | `false` | Show Google button when true |
+| `enableFacebook` | `boolean` | No | `false` | Show Facebook button when true |
+| `enableApple` | `boolean` | No | `false` | Show Sign in with Apple button when true |
+| `enableMicrosoft` | `boolean` | No | `false` | Show Microsoft button when true |
+| `enableGithub` | `boolean` | No | `false` | Show GitHub button when true |
+| `enableDiscord` | `boolean` | No | `false` | Show Discord button when true |
 | `onSuccess` | `(response: AuthResponse) => void` | No | - | Callback when login succeeds |
 | `onError` | `(error: Error) => void` | No | - | Callback when login fails |
 | `showRegisterLink` | `boolean` | No | `true` | Show link to registration page |
@@ -174,7 +201,15 @@ function RegisterPage() {
 |------|------|----------|---------|-------------|
 | `apiUrl` | `string` | No* | - | Base URL for the authentication API |
 | `authApi` | `AuthApi` | No* | - | Custom API functions object |
-| `onSuccess` | `(response: AuthResponse \| RegisterResponse) => void` | No | - | Callback when registration succeeds |
+| `oauthApiUrl` | `string` | No | - | Base URL for OAuth endpoints (defaults to `apiUrl` without `/signup`) |
+| `enableOAuth` | `boolean` | No | `true` | Master toggle for showing OAuth buttons |
+| `enableGoogle` | `boolean` | No | `false` | Show Google button when true |
+| `enableFacebook` | `boolean` | No | `false` | Show Facebook button when true |
+| `enableApple` | `boolean` | No | `false` | Show Sign in with Apple button when true |
+| `enableMicrosoft` | `boolean` | No | `false` | Show Microsoft button when true |
+| `enableGithub` | `boolean` | No | `false` | Show GitHub button when true |
+| `enableDiscord` | `boolean` | No | `false` | Show Discord button when true |
+| `onSuccess` | `(response: AuthResponse \\| RegisterResponse) => void` | No | - | Callback when registration succeeds |
 | `onError` | `(error: Error) => void` | No | - | Callback when registration fails |
 | `showLoginLink` | `boolean` | No | `true` | Show link to login page |
 | `onSwitchToLogin` | `() => void` | No | - | Callback when user clicks login link |

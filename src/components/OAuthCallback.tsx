@@ -106,4 +106,3 @@ export function OAuthCallback({ oauthApiUrl, onSuccess, onError, onContinue }: O
     </Container>
   );
 }
-

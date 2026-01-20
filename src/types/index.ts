@@ -38,7 +38,7 @@ export interface OAuthTokenResponse {
   providerUserId: string;
 }
 
-export type OAuthProvider = 'google' | 'facebook';
+export type OAuthProvider = 'google' | 'facebook' | 'apple' | 'microsoft' | 'github' | 'discord';
 
 export interface AuthApi {
   login: (username: string, password: string) => Promise<AuthResponse>;
@@ -57,6 +57,12 @@ export interface AuthComponentProps {
   onSwitchToRegister?: () => void;
   onSwitchToLogin?: () => void;
   enableOAuth?: boolean;
+  enableGoogle?: boolean;
+  enableFacebook?: boolean;
+  enableApple?: boolean;
+  enableMicrosoft?: boolean;
+  enableGithub?: boolean;
+  enableDiscord?: boolean;
 }
 
 export interface LoginProps extends AuthComponentProps {
