@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 export interface AuthResponse {
   access_token: string;
   expires_in: number;
@@ -63,6 +65,10 @@ export interface AuthComponentProps {
   enableMicrosoft?: boolean;
   enableGithub?: boolean;
   enableDiscord?: boolean;
+  /** Optional class name for the root container. Overrides default layout styling when needed. */
+  className?: string;
+  /** Optional inline styles for the root container. Merged with default styles. */
+  style?: CSSProperties;
 }
 
 export interface LoginProps extends AuthComponentProps {

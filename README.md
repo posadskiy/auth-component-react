@@ -8,6 +8,21 @@ A reusable React component library for authentication (Login and Register) built
 npm install auth-component-react
 ```
 
+## Styles
+
+**Styles are included.** The package imports Mantine's CSS so components look correct by default. You do not need to import `@mantine/core/styles.css` in your app.
+
+To override the default look, pass **`className`** or **`style`** to the root container:
+
+```tsx
+<Login
+  apiUrl="..."
+  onSuccess={handleSuccess}
+  className="my-login-wrapper"
+  style={{ maxWidth: 400 }}
+/>
+```
+
 ## Peer Dependencies
 
 This package requires the following peer dependencies:

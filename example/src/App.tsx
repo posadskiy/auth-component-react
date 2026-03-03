@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MantineProvider, Container, Paper, Text, Button } from '@mantine/core';
-// For local development, import from local copies
-// In production, this would be: import { Login, Register } from 'auth-component-react';
-import { Login } from './components/Login';
-import { Register } from './components/Register';
-import { OAuthCallback } from './OAuthCallback';
+import { Login, Register, OAuthCallback } from 'auth-component-react';
 
 const queryClient = new QueryClient();
 
@@ -18,7 +14,6 @@ function App() {
   // Restore authentication state from localStorage on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const userId = localStorage.getItem('userId');
     if (token) {
       setIsAuthenticated(true);
       // Try to restore auth data if available

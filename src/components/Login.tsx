@@ -21,6 +21,8 @@ export function Login({
   enableMicrosoft = false,
   enableGithub = false,
   enableDiscord = false,
+  className,
+  style,
 }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -193,8 +195,10 @@ export function Login({
 
   const hasOAuthProviders = enableOAuth && enabledProviders.length > 0;
 
+  const containerStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', ...style };
+
   return (
-    <Container size="xs" h="100vh" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <Container size="xs" h="100vh" className={className} style={containerStyle}>
       <Paper radius="md" p="xl" withBorder style={{ width: '100%' }}>
         <Title ta="center" mb="md">{title}</Title>
         {showRegisterLink && (

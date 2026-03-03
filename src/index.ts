@@ -1,3 +1,5 @@
+import '@mantine/core/styles.css';
+
 export { Login } from './components/Login';
 export { Register } from './components/Register';
 export { OAuthCallback } from './components/OAuthCallback';

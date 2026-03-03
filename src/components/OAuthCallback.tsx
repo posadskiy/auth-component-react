@@ -8,9 +8,13 @@ export interface OAuthCallbackProps {
   onSuccess: (data: OAuthTokenResponse) => void;
   onError: (error: Error) => void;
   onContinue?: () => void;
+  /** Optional class name for the root container. */
+  className?: string;
+  /** Optional inline styles for the root container. */
+  style?: React.CSSProperties;
 }
 
-export function OAuthCallback({ oauthApiUrl, onSuccess, onError, onContinue }: OAuthCallbackProps) {
+export function OAuthCallback({ oauthApiUrl, onSuccess, onError, onContinue, className, style }: OAuthCallbackProps) {
   const [status, setStatus] = useState<'pending' | 'error' | 'success'>('pending');
   const [message, setMessage] = useState<string>('Completing sign-in…');
   const [authData, setAuthData] = useState<OAuthTokenResponse | null>(null);
@@ -64,8 +68,10 @@ export function OAuthCallback({ oauthApiUrl, onSuccess, onError, onContinue }: O
     }
   };
 
+  const containerStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', ...style };
+
   return (
-    <Container size="xs" h="100vh" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <Container size="xs" h="100vh" className={className} style={containerStyle}>
       <Paper radius="md" p="xl" withBorder style={{ width: '100%' }}>
         <Stack align="center" gap="md">
           <Title order={3}>
