@@ -17,10 +17,11 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "*": ["../src/*", "src/*", "node_modules/*"]
+      "auth-component-react": ["../src/index.ts"]
     }
   },
   "include": ["src", "../src"],
+  "exclude": ["../src/**/*.test.ts", "../src/**/*.test.tsx", "../src/test"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
 

@@ -1,108 +1,143 @@
-import { useEffect, useState, useRef } from 'react';
-import { Container, Paper, Title, Text, Loader, Stack, Button } from '@mantine/core';
+import { useEffect, useRef, useState } from 'react';
+import { Button, Container, Loader, Paper, Stack, Text, Title } from '@mantine/core';
 import axios from 'axios';
-import { OAuthTokenResponse } from '../types';
+import { mapAuthError } from '../errors';
+import { resolveLabels, type AuthLabels } from '../labels';
+import { navigation } from '../navigation';
+import { subscribeFinalize } from '../oauth/finalize';
+import { clearOAuthTransaction, readOAuthState } from '../oauth/storage';
+import type { OAuthTokenResponse } from '../types';
 
 export interface OAuthCallbackProps {
   oauthApiUrl: string;
   onSuccess: (data: OAuthTokenResponse) => void;
   onError: (error: Error) => void;
   onContinue?: () => void;
-  /** Optional class name for the root container. */
+  returnPath?: string;
+  labels?: Partial<AuthLabels>;
   className?: string;
-  /** Optional inline styles for the root container. */
   style?: React.CSSProperties;
 }
 
-export function OAuthCallback({ oauthApiUrl, onSuccess, onError, onContinue, className, style }: OAuthCallbackProps) {
+export function OAuthCallback({
+  oauthApiUrl,
+  onSuccess,
+  onError,
+  onContinue,
+  returnPath,
+  labels: labelOverrides,
+  className,
+  style,
+}: OAuthCallbackProps) {
+  const labels = resolveLabels(labelOverrides);
   const [status, setStatus] = useState<'pending' | 'error' | 'success'>('pending');
-  const [message, setMessage] = useState<string>('Completing sign-in…');
-  const [authData, setAuthData] = useState<OAuthTokenResponse | null>(null);
-  const hasCalledRef = useRef(false);
+  const [message, setMessage] = useState(labels.callbackPendingMessage);
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+  const labelsRef = useRef(labels);
+  const returnPathRef = useRef(returnPath);
+  const onContinueRef = useRef(onContinue);
+
+  onSuccessRef.current = onSuccess;
+  onErrorRef.current = onError;
+  labelsRef.current = labels;
+  returnPathRef.current = returnPath;
+  onContinueRef.current = onContinue;
 
   useEffect(() => {
-    // Prevent multiple calls (e.g., in React Strict Mode)
-    if (hasCalledRef.current) {
-      return;
-    }
-
+    const currentLabels = labelsRef.current;
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
+    const state = params.get('state');
+
+    const fail = (text: string) => {
+      clearOAuthTransaction();
+      setStatus('error');
+      setMessage(text);
+      onErrorRef.current(new Error(text));
+    };
 
     if (!code) {
-      setStatus('error');
-      setMessage('Missing OAuth code in callback URL.');
-      onError(new Error('Missing OAuth code in callback URL.'));
+      fail(currentLabels.callbackMissingCode);
+      return;
+    }
+    if (!state) {
+      fail(currentLabels.callbackMissingState);
       return;
     }
 
-    hasCalledRef.current = true;
+    const storedState = readOAuthState();
+    if (!storedState || storedState !== state) {
+      fail(currentLabels.callbackStateMismatch);
+      return;
+    }
 
-    const finalize = async () => {
-      try {
-        const response = await axios.get<OAuthTokenResponse>(`${oauthApiUrl}/oauth2/finalize`, {
-          params: { code },
-        });
+    let active = true;
+    const { promise, unsubscribe } = subscribeFinalize(oauthApiUrl, code, state);
+
+    promise.then(
+      (data) => {
+        if (!active) return;
+        clearOAuthTransaction();
         setStatus('success');
-        setMessage('Sign-in successful!');
-        setAuthData(response.data);
-        onSuccess(response.data);
-        // Update URL to home page without full page reload
-        window.history.replaceState({}, '', '/');
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error('OAuth finalize failed');
+        setMessage(labelsRef.current.callbackSuccessMessage);
+        onSuccessRef.current(data);
+        navigation.replacePath(returnPathRef.current ?? window.location.pathname);
+      },
+      (caught: unknown) => {
+        if (!active) return;
+        if (axios.isCancel(caught) || (axios.isAxiosError(caught) && caught.code === 'ERR_CANCELED')) return;
+        const mapped = mapAuthError(caught, 'oauth', labelsRef.current);
         setStatus('error');
-        setMessage(error.message);
-        onError(error);
-      }
-    };
+        setMessage(mapped.message);
+        onErrorRef.current(mapped.error);
+      },
+    );
 
-    finalize();
-  }, [oauthApiUrl]); // Removed onSuccess and onError from dependencies
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [oauthApiUrl]);
 
   const handleContinue = () => {
-    if (onContinue) {
-      onContinue();
-    } else {
-      window.location.href = '/';
+    if (onContinueRef.current) {
+      onContinueRef.current();
+      return;
+    }
+    if (returnPathRef.current) {
+      navigation.assign(returnPathRef.current);
     }
   };
 
-  const containerStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', ...style };
+  const showContinue = status === 'success' && (onContinue || returnPath);
 
   return (
-    <Container size="xs" h="100vh" className={className} style={containerStyle}>
+    <Container size="xs" className={className} style={style}>
       <Paper radius="md" p="xl" withBorder style={{ width: '100%' }}>
         <Stack align="center" gap="md">
           <Title order={3}>
-            {status === 'pending' ? 'Finishing up…' : status === 'success' ? 'Success!' : 'Error'}
+            {status === 'pending'
+              ? labels.callbackPendingTitle
+              : status === 'success'
+                ? labels.callbackSuccessTitle
+                : labels.callbackErrorTitle}
           </Title>
           {status === 'pending' ? (
             <>
               <Loader />
-              <Text c="dimmed">Completing sign-in with your provider</Text>
+              <Text c="dimmed">{labels.callbackPendingMessage}</Text>
             </>
           ) : status === 'success' ? (
             <>
-              <Text c="green" fw={500}>{message}</Text>
-              {authData && (
-                <Paper p="md" withBorder style={{ width: '100%', marginTop: '1rem' }}>
-                  <Text size="sm" c="dimmed" mb="xs">Authentication Details:</Text>
-                  <pre style={{ 
-                    background: '#f5f5f5', 
-                    padding: '0.75rem', 
-                    borderRadius: '4px', 
-                    fontSize: '0.75rem',
-                    overflow: 'auto',
-                    maxHeight: '200px'
-                  }}>
-                    {JSON.stringify(authData, null, 2)}
-                  </pre>
-                </Paper>
+              <Text c="green" fw={500}>
+                {message}
+              </Text>
+              {showContinue && (
+                <Button onClick={handleContinue} fullWidth mt="md">
+                  {labels.continue}
+                </Button>
               )}
-              <Button onClick={handleContinue} fullWidth mt="md">
-                Continue
-              </Button>
             </>
           ) : (
             <Text c="red">{message}</Text>
