@@ -3,14 +3,13 @@ import { render, screen } from '@testing-library/react';
 import axios from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetOAuthFinalizeForTests } from '../oauth/finalize';
-import { persistOAuthTransaction } from '../oauth/storage';
 import { OAuthCallback } from './OAuthCallback';
 
-const { get } = vi.hoisted(() => ({ get: vi.fn() }));
+const { post } = vi.hoisted(() => ({ post: vi.fn() }));
 
 vi.mock('axios', () => ({
   default: {
-    get,
+    post,
     isAxiosError: (error: unknown) =>
       Boolean(error && typeof error === 'object' && (error as { isAxiosError?: boolean }).isAxiosError),
     isCancel: (error: unknown) =>
@@ -32,9 +31,8 @@ function renderCallback(search: string, props: Partial<React.ComponentProps<type
 
 describe('OAuthCallback', () => {
   beforeEach(() => {
-    sessionStorage.clear();
     resetOAuthFinalizeForTests();
-    get.mockReset();
+    post.mockReset();
     window.history.pushState({}, '', '/oauth/callback');
   });
 
@@ -42,49 +40,33 @@ describe('OAuthCallback', () => {
     const { onSuccess, onError } = renderCallback('');
 
     expect(await screen.findByText('Missing OAuth code in callback URL.')).toBeInTheDocument();
-    expect(axios.get).not.toHaveBeenCalled();
+    expect(axios.post).not.toHaveBeenCalled();
     expect(onSuccess).not.toHaveBeenCalled();
     expect(onError).toHaveBeenCalled();
   });
 
-  it('rejects a missing or mismatched state without calling finalize', async () => {
-    const missing = renderCallback('?code=abc');
-    expect(await screen.findByText('Missing OAuth state in callback URL.')).toBeInTheDocument();
-    expect(axios.get).not.toHaveBeenCalled();
-    expect(missing.onSuccess).not.toHaveBeenCalled();
-
-    persistOAuthTransaction('expected', 'nonce');
-    const mismatch = renderCallback('?code=abc&state=other');
-    expect(await screen.findByText('OAuth state did not match this sign-in attempt.')).toBeInTheDocument();
-    expect(axios.get).not.toHaveBeenCalled();
-    expect(mismatch.onError).toHaveBeenCalled();
-  });
-
-  it('finalizes a matching state and does not render tokens', async () => {
-    persistOAuthTransaction('good', 'nonce');
-    get.mockResolvedValue({
+  it('finalizes a code from the auth host and does not render tokens', async () => {
+    post.mockResolvedValue({
       data: {
-        accessToken: 'super-secret-token',
-        refreshToken: 'refresh-secret',
-        expiresIn: 3600,
-        tokenType: 'Bearer',
-        userId: '7',
-        provider: 'apple',
-        providerUserId: 'provider-user',
+        access_token: 'super-secret-token',
+        refresh_token: 'refresh-secret',
+        user_id: '7',
       },
     });
 
-    const { onSuccess } = renderCallback('?code=abc&state=good', { returnPath: '/home' });
+    const { onSuccess } = renderCallback('?code=abc', { returnPath: '/home' });
 
     expect(await screen.findByText('Sign-in successful!')).toBeInTheDocument();
     expect(screen.queryByText('super-secret-token')).not.toBeInTheDocument();
     expect(screen.queryByText('refresh-secret')).not.toBeInTheDocument();
-    expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ accessToken: 'super-secret-token', userId: '7' }));
-    expect(axios.get).toHaveBeenCalledWith(
+    expect(onSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ access_token: 'super-secret-token', user_id: '7' }),
+    );
+    expect(axios.post).toHaveBeenCalledWith(
       'http://localhost:8100/oauth2/finalize',
-      expect.objectContaining({ params: { code: 'abc', state: 'good' } }),
+      { code: 'abc' },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(window.location.pathname).toBe('/home');
-    expect(sessionStorage.getItem('auth-component-react.oauth.state')).toBeNull();
   });
 });

@@ -1,7 +1,5 @@
-import axios from 'axios';
 import { navigation } from '../navigation';
-import type { AuthApi, OAuthAuthorizationResponse, OAuthProvider } from '../types';
-import { persistOAuthTransaction } from './storage';
+import type { OAuthProvider } from '../types';
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 
@@ -32,30 +30,32 @@ export function assertSafeAuthorizationUri(uri: string, allowedHosts?: string[])
   return url;
 }
 
-export async function beginOAuthAuthorization(options: {
+export function buildAuthorizeUrl(oauthApiUrl: string, provider: OAuthProvider, returnTo: string): string {
+  const base = oauthApiUrl.replace(/\/$/, '');
+  const url = new URL(`${base}/oauth2/authorize/${provider}`);
+  url.searchParams.set('return_to', returnTo);
+  return url.toString();
+}
+
+export function resolveOAuthReturnTo(returnTo?: string): string {
+  const current = `${window.location.origin}${window.location.pathname}`;
+  if (!returnTo) return current;
+  return new URL(returnTo, window.location.origin).toString();
+}
+
+export function beginOAuthAuthorization(options: {
   provider: OAuthProvider;
   oauthApiUrl?: string;
-  authApi?: AuthApi;
+  oauthReturnTo?: string;
   allowedOAuthHosts?: string[];
-}): Promise<void> {
-  const { provider, oauthApiUrl, authApi, allowedOAuthHosts } = options;
+}): void {
+  const { provider, oauthApiUrl, oauthReturnTo, allowedOAuthHosts } = options;
 
-  if (!authApi?.oauthAuthorize && !oauthApiUrl) {
-    throw new Error('Either oauthApiUrl or authApi.oauthAuthorize must be provided for OAuth');
+  if (!oauthApiUrl) {
+    throw new Error('oauthApiUrl must be provided for OAuth');
   }
 
-  const data = authApi?.oauthAuthorize
-    ? await authApi.oauthAuthorize(provider)
-    : (await axios.get<OAuthAuthorizationResponse>(`${oauthApiUrl}/oauth2/authorize/${provider}`)).data;
-
-  if (!data?.state) {
-    throw new Error('OAuth provider response did not include a state value.');
-  }
-  if (!data.authorizationUri) {
-    throw new Error('OAuth provider response did not include an authorization URL.');
-  }
-
-  assertSafeAuthorizationUri(data.authorizationUri, allowedOAuthHosts);
-  persistOAuthTransaction(data.state, data.nonce ?? '');
-  navigation.assign(data.authorizationUri);
+  const url = buildAuthorizeUrl(oauthApiUrl, provider, resolveOAuthReturnTo(oauthReturnTo));
+  assertSafeAuthorizationUri(url, allowedOAuthHosts);
+  navigation.assign(url);
 }

@@ -2,11 +2,11 @@ import { useRef, useState } from 'react';
 import type { AuthLabels } from '../labels';
 import { mapAuthError } from '../errors';
 import { beginOAuthAuthorization } from '../oauth/authorize';
-import type { AuthApi, OAuthProvider } from '../types';
+import type { OAuthProvider } from '../types';
 
 export function useOAuthAction(options: {
   oauthApiUrl?: string;
-  authApi?: AuthApi;
+  oauthReturnTo?: string;
   allowedOAuthHosts?: string[];
   onError?: (error: Error) => void;
   disabled: boolean;
@@ -23,18 +23,20 @@ export function useOAuthAction(options: {
     setError(null);
     setActiveProvider(provider);
 
-    void beginOAuthAuthorization({
-      provider,
-      oauthApiUrl: options.oauthApiUrl,
-      authApi: options.authApi,
-      allowedOAuthHosts: options.allowedOAuthHosts,
-    }).catch((caught) => {
+    try {
+      beginOAuthAuthorization({
+        provider,
+        oauthApiUrl: options.oauthApiUrl,
+        oauthReturnTo: options.oauthReturnTo,
+        allowedOAuthHosts: options.allowedOAuthHosts,
+      });
+    } catch (caught) {
       const mapped = mapAuthError(caught, 'oauth', options.labels);
       setError(mapped.message);
       options.onError?.(mapped.error);
       pendingRef.current = false;
       setActiveProvider(null);
-    });
+    }
   };
 
   return { activeProvider, error, start };

@@ -5,7 +5,8 @@ import { Login, OAuthCallback, Register, type AuthResponse, type OAuthTokenRespo
 function accountLabel(data: AuthResponse | OAuthTokenResponse | null): string {
   if (!data) return 'Signed in';
   if ('username' in data && data.username) return data.username;
-  if (data.userId) return String(data.userId);
+  if ('user_id' in data && data.user_id) return data.user_id;
+  if ('userId' in data && data.userId) return String(data.userId);
   return 'Signed in';
 }
 
@@ -36,12 +37,15 @@ function App() {
   const oauthApiUrl = import.meta.env.VITE_OAUTH_API_URL || 'http://localhost:8100';
   const registerApiUrl = import.meta.env.VITE_REGISTER_API_URL || 'http://localhost:8095/signup';
 
+  const oauthReturnTo = `${window.location.origin}/oauth/callback`;
+
   const handleLoginSuccess = (response: AuthResponse | OAuthTokenResponse) => {
-    const accessToken = 'access_token' in response ? response.access_token : response.accessToken;
+    const accessToken = response.access_token;
+    const userId = 'user_id' in response ? response.user_id : response.userId;
     const name = accountLabel(response);
     if (accessToken) {
       localStorage.setItem('token', accessToken);
-      localStorage.setItem('userId', response.userId ? String(response.userId) : '');
+      localStorage.setItem('userId', userId ? String(userId) : '');
       localStorage.setItem('accountName', name);
     }
     setAccountName(name);
@@ -108,6 +112,7 @@ function App() {
           <Register
             apiUrl={registerApiUrl}
             oauthApiUrl={oauthApiUrl}
+            oauthReturnTo={oauthReturnTo}
             providers={['apple', 'google', 'github']}
             onSuccess={handleRegisterSuccess}
             onError={handleError}
@@ -117,6 +122,7 @@ function App() {
           <Login
             apiUrl={loginApiUrl}
             oauthApiUrl={oauthApiUrl}
+            oauthReturnTo={oauthReturnTo}
             providers={['apple', 'google', 'github']}
             onSuccess={handleLoginSuccess}
             onError={handleError}

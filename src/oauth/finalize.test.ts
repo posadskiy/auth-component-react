@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import axios from 'axios';
 import { resetOAuthFinalizeForTests, subscribeFinalize } from './finalize';
 
-const { get } = vi.hoisted(() => ({ get: vi.fn() }));
+const { post } = vi.hoisted(() => ({ post: vi.fn() }));
 
 vi.mock('axios', () => ({
   default: {
-    get,
+    post,
     isAxiosError: (error: unknown) =>
       Boolean(error && typeof error === 'object' && (error as { isAxiosError?: boolean }).isAxiosError),
     isCancel: (error: unknown) =>
@@ -17,20 +17,25 @@ vi.mock('axios', () => ({
 describe('subscribeFinalize', () => {
   beforeEach(() => {
     resetOAuthFinalizeForTests();
-    get.mockReset();
+    post.mockReset();
   });
 
   it('shares one request and aborts only after the last subscriber leaves', async () => {
     let signal: AbortSignal | undefined;
-    get.mockImplementation((_url: string, config: { signal: AbortSignal }) => {
+    post.mockImplementation((_url: string, _body: unknown, config: { signal: AbortSignal }) => {
       signal = config.signal;
       return new Promise(() => undefined);
     });
 
-    const first = subscribeFinalize('http://localhost:8100', 'code', 'state');
-    const second = subscribeFinalize('http://localhost:8100', 'code', 'state');
+    const first = subscribeFinalize('http://localhost:8100', 'code');
+    const second = subscribeFinalize('http://localhost:8100', 'code');
 
-    expect(axios.get).toHaveBeenCalledTimes(1);
+    expect(axios.post).toHaveBeenCalledTimes(1);
+    expect(axios.post).toHaveBeenCalledWith(
+      'http://localhost:8100/oauth2/finalize',
+      { code: 'code' },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
 
     first.unsubscribe();
     await new Promise((resolve) => queueMicrotask(resolve));

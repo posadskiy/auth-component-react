@@ -4,14 +4,12 @@ import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { navigation } from '../navigation';
-import { OAUTH_NONCE_STORAGE_KEY, OAUTH_STATE_STORAGE_KEY } from '../oauth/storage';
 import { Login } from './Login';
 
-const { get, post } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
+const { post } = vi.hoisted(() => ({ post: vi.fn() }));
 
 vi.mock('axios', () => ({
   default: {
-    get,
     post,
     isAxiosError: (error: unknown) =>
       Boolean(error && typeof error === 'object' && (error as { isAxiosError?: boolean }).isAxiosError),
@@ -32,27 +30,15 @@ function renderLogin(props: Partial<React.ComponentProps<typeof Login>> = {}) {
   );
 }
 
-function deferred<T>() {
-  let resolve: (value: T) => void = () => undefined;
-  const promise = new Promise<T>((res) => {
-    resolve = res;
-  });
-  return { promise, resolve };
-}
-
 describe('Login', () => {
   beforeEach(() => {
-    sessionStorage.clear();
-    get.mockReset();
     post.mockReset();
     vi.spyOn(navigation, 'assign').mockImplementation(() => undefined);
   });
 
-  it('shows loading only on the clicked provider and ignores another provider', async () => {
+  it('shows loading only on the clicked provider and navigates to the auth host', async () => {
     const user = userEvent.setup();
-    const pending = deferred<{ data: { authorizationUri: string; state: string; nonce: string } }>();
-    get.mockReturnValue(pending.promise);
-    renderLogin();
+    renderLogin({ oauthReturnTo: 'https://app.example/oauth/callback' });
 
     await user.click(screen.getByRole('button', { name: 'Sign in with Apple' }));
 
@@ -63,23 +49,16 @@ describe('Login', () => {
     expect(google).toBeDisabled();
 
     await user.click(google);
-    expect(axios.get).toHaveBeenCalledTimes(1);
+    expect(navigation.assign).toHaveBeenCalledTimes(1);
+    expect(navigation.assign).toHaveBeenCalledWith(
+      'http://localhost:8100/oauth2/authorize/apple?return_to=https%3A%2F%2Fapp.example%2Foauth%2Fcallback',
+    );
+    expect(axios.post).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled();
-
-    pending.resolve({
-      data: { authorizationUri: 'https://appleid.apple.com/auth/authorize', state: 'state-1', nonce: 'nonce-1' },
-    });
-
-    await vi.waitFor(() => {
-      expect(navigation.assign).toHaveBeenCalledWith('https://appleid.apple.com/auth/authorize');
-    });
-    expect(sessionStorage.getItem(OAUTH_STATE_STORAGE_KEY)).toBe('state-1');
-    expect(sessionStorage.getItem(OAUTH_NONCE_STORAGE_KEY)).toBe('nonce-1');
   });
 
   it('does not submit the password form while a provider request is in flight', async () => {
     const user = userEvent.setup();
-    get.mockReturnValue(new Promise(() => undefined));
     renderLogin();
 
     await user.type(screen.getByRole('textbox', { name: /username/i }), 'ada');
@@ -117,11 +96,10 @@ describe('Login', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Database unavailable');
   });
 
-  it('shows an OAuth error and does not redirect to an unsafe authorization url', async () => {
+  it('shows an OAuth error and does not redirect to an unsafe auth host', async () => {
     const user = userEvent.setup();
     const onError = vi.fn();
-    get.mockResolvedValue({ data: { authorizationUri: 'http://evil.example/auth', state: 'state-1' } });
-    renderLogin({ onError });
+    renderLogin({ onError, oauthApiUrl: 'http://evil.example' });
 
     await user.click(screen.getByRole('button', { name: 'Sign in with Apple' }));
 

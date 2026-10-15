@@ -58,7 +58,7 @@ Password login posts `{ username, password }` to `apiUrl` and expects `{ access_
 
 Registration posts `{ username, email, password }` to `apiUrl` and expects `{ id, username, email }`.
 
-OAuth does not derive its base URL from `apiUrl`. Pass `oauthApiUrl` or `authApi.oauthAuthorize`. Authorize requests go to `${oauthApiUrl}/oauth2/authorize/{provider}` and must return `{ authorizationUri, state, nonce? }`. The component stores `state` for the callback and only redirects to HTTPS URLs, or HTTP on localhost.
+OAuth does not derive its base URL from `apiUrl`. Pass `oauthApiUrl`. A provider button navigates the browser to `${oauthApiUrl}/oauth2/authorize/{provider}?return_to=...` so the auth host can set its browser cookie. `oauthReturnTo` is where that host should send the browser back; it receives only `?code=`. The auth host must be HTTPS, or HTTP on localhost.
 
 ### Custom API
 
@@ -83,14 +83,14 @@ OAuth does not derive its base URL from `apiUrl`. Pass `oauthApiUrl` or `authApi
 
 ### OAuth callback
 
-Mount this on the provider redirect URL. It sends `code` and `state` to `${oauthApiUrl}/oauth2/finalize` only when `state` matches the value stored before the redirect.
+Mount this on the URL you passed as `oauthReturnTo`. The auth host redirects there with `?code=` after it has checked state. The component posts `{ code }` to `${oauthApiUrl}/oauth2/finalize` and expects `{ access_token, refresh_token, user_id }`.
 
 ```tsx
 <OAuthCallback
   oauthApiUrl="http://localhost:8100"
   returnPath="/"
   onSuccess={(tokens) => {
-    localStorage.setItem('token', tokens.accessToken);
+    localStorage.setItem('token', tokens.access_token);
   }}
   onError={(error) => {
     console.error(error);
@@ -108,8 +108,8 @@ Mount this on the provider redirect URL. It sends `code` and `state` to `${oauth
 <Login
   apiUrl="http://localhost:8100/login"
   oauthApiUrl="http://localhost:8100"
+  oauthReturnTo="https://app.example/oauth/callback"
   providers={['github', { id: 'apple', label: 'Sign in with Apple' }]}
-  allowedOAuthHosts={['appleid.apple.com', 'github.com']}
 />
 ```
 

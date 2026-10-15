@@ -16,6 +16,7 @@ export function CredentialsForm(props: CredentialsFormProps) {
     apiUrl,
     authApi,
     oauthApiUrl,
+    oauthReturnTo,
     onError,
     enableOAuth,
     providers: providerOptions,
@@ -59,7 +60,7 @@ export function CredentialsForm(props: CredentialsFormProps) {
 
   const oauth = useOAuthAction({
     oauthApiUrl,
-    authApi,
+    oauthReturnTo,
     allowedOAuthHosts,
     onError,
     disabled: submitting,

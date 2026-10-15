@@ -5,7 +5,6 @@ import { mapAuthError } from '../errors';
 import { resolveLabels, type AuthLabels } from '../labels';
 import { navigation } from '../navigation';
 import { subscribeFinalize } from '../oauth/finalize';
-import { clearOAuthTransaction, readOAuthState } from '../oauth/storage';
 import type { OAuthTokenResponse } from '../types';
 
 export interface OAuthCallbackProps {
@@ -48,37 +47,20 @@ export function OAuthCallback({
     const currentLabels = labelsRef.current;
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
-    const state = params.get('state');
-
-    const fail = (text: string) => {
-      clearOAuthTransaction();
-      setStatus('error');
-      setMessage(text);
-      onErrorRef.current(new Error(text));
-    };
 
     if (!code) {
-      fail(currentLabels.callbackMissingCode);
-      return;
-    }
-    if (!state) {
-      fail(currentLabels.callbackMissingState);
-      return;
-    }
-
-    const storedState = readOAuthState();
-    if (!storedState || storedState !== state) {
-      fail(currentLabels.callbackStateMismatch);
+      setStatus('error');
+      setMessage(currentLabels.callbackMissingCode);
+      onErrorRef.current(new Error(currentLabels.callbackMissingCode));
       return;
     }
 
     let active = true;
-    const { promise, unsubscribe } = subscribeFinalize(oauthApiUrl, code, state);
+    const { promise, unsubscribe } = subscribeFinalize(oauthApiUrl, code);
 
     promise.then(
       (data) => {
         if (!active) return;
-        clearOAuthTransaction();
         setStatus('success');
         setMessage(labelsRef.current.callbackSuccessMessage);
         onSuccessRef.current(data);

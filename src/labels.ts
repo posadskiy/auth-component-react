@@ -23,8 +23,6 @@ export interface AuthLabels {
   callbackSuccessMessage: string;
   callbackErrorTitle: string;
   callbackMissingCode: string;
-  callbackMissingState: string;
-  callbackStateMismatch: string;
   continue: string;
   provider: Record<OAuthProvider, string>;
   registerProvider: Record<OAuthProvider, string>;
@@ -62,8 +60,6 @@ export const defaultLabels: AuthLabels = {
   callbackSuccessMessage: 'Sign-in successful!',
   callbackErrorTitle: 'Error',
   callbackMissingCode: 'Missing OAuth code in callback URL.',
-  callbackMissingState: 'Missing OAuth state in callback URL.',
-  callbackStateMismatch: 'OAuth state did not match this sign-in attempt.',
   continue: 'Continue',
   provider: providerLabels,
   registerProvider: {

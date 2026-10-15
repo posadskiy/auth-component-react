@@ -26,20 +26,10 @@ export interface RegisterResponse {
   email: string;
 }
 
-export interface OAuthAuthorizationResponse {
-  authorizationUri: string;
-  state: string;
-  nonce?: string;
-}
-
 export interface OAuthTokenResponse {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-  tokenType: string;
-  userId: string;
-  provider: string;
-  providerUserId: string;
+  access_token: string;
+  refresh_token: string;
+  user_id: string;
 }
 
 export type { OAuthProvider } from '../oauth/providerIds';
@@ -49,13 +39,14 @@ export type OAuthProviderOption = OAuthProvider | { id: OAuthProvider; label?: s
 export interface AuthApi {
   login: (username: string, password: string) => Promise<AuthResponse>;
   register?: (username: string, email: string, password: string) => Promise<RegisterResponse>;
-  oauthAuthorize?: (provider: OAuthProvider) => Promise<OAuthAuthorizationResponse>;
 }
 
 export interface AuthComponentProps {
   apiUrl?: string;
   authApi?: AuthApi;
   oauthApiUrl?: string;
+  /** Absolute or site-relative URL auth-service should redirect back to with `?code=`. */
+  oauthReturnTo?: string;
   onError?: (error: Error) => void;
   enableOAuth?: boolean;
   providers?: OAuthProviderOption[];

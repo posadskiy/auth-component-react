@@ -9,20 +9,18 @@ type Inflight = {
 
 const inflight = new Map<string, Inflight>();
 
-export function subscribeFinalize(oauthApiUrl: string, code: string, state: string): {
+export function subscribeFinalize(oauthApiUrl: string, code: string): {
   promise: Promise<OAuthTokenResponse>;
   unsubscribe: () => void;
 } {
-  const key = `${oauthApiUrl}\n${code}\n${state}`;
+  const base = oauthApiUrl.replace(/\/$/, '');
+  const key = `${base}\n${code}`;
   let entry = inflight.get(key);
 
   if (!entry) {
     const controller = new AbortController();
     const promise = axios
-      .get<OAuthTokenResponse>(`${oauthApiUrl}/oauth2/finalize`, {
-        params: { code, state },
-        signal: controller.signal,
-      })
+      .post<OAuthTokenResponse>(`${base}/oauth2/finalize`, { code }, { signal: controller.signal })
       .then((response) => response.data);
 
     entry = { controller, promise, subscribers: 0 };
