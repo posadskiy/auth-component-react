@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button, MantineProvider, Paper, Text } from '@mantine/core';
 import { Login, OAuthCallback, Register, type AuthResponse, type OAuthTokenResponse } from 'auth-component-react';
 
@@ -20,36 +20,21 @@ function AuthLayout({ children }: { children: React.ReactNode }) {
 
 function App() {
   const [showRegister, setShowRegister] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [accountName, setAccountName] = useState('Signed in');
+  // Memory only. A reload clears the session. The access token is not rendered or written to storage.
+  const [session, setSession] = useState<{ accessToken: string; accountName: string } | null>(null);
   const isOAuthCallback = window.location.pathname === '/oauth/callback';
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedName = localStorage.getItem('accountName');
-    if (token) {
-      setIsAuthenticated(true);
-      if (storedName) setAccountName(storedName);
-    }
-  }, []);
 
   const loginApiUrl = import.meta.env.VITE_LOGIN_API_URL || 'http://localhost:8100/login';
   const oauthApiUrl = import.meta.env.VITE_OAUTH_API_URL || 'http://localhost:8100';
   const registerApiUrl = import.meta.env.VITE_REGISTER_API_URL || 'http://localhost:8095/signup';
-
   const oauthReturnTo = `${window.location.origin}/oauth/callback`;
 
   const handleLoginSuccess = (response: AuthResponse | OAuthTokenResponse) => {
-    const accessToken = response.access_token;
-    const userId = 'user_id' in response ? response.user_id : response.userId;
-    const name = accountLabel(response);
-    if (accessToken) {
-      localStorage.setItem('token', accessToken);
-      localStorage.setItem('userId', userId ? String(userId) : '');
-      localStorage.setItem('accountName', name);
-    }
-    setAccountName(name);
-    setIsAuthenticated(true);
+    if (!response.access_token) return;
+    setSession({
+      accessToken: response.access_token,
+      accountName: accountLabel(response),
+    });
   };
 
   const handleRegisterSuccess = () => {
@@ -57,20 +42,16 @@ function App() {
   };
 
   const handleError = (error: Error) => {
-    console.error('Auth error:', error);
+    console.error(error.message);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('accountName');
-    setIsAuthenticated(false);
-    setAccountName('Signed in');
+    setSession(null);
     setShowRegister(false);
-    window.location.href = '/';
+    window.history.replaceState({}, '', '/');
   };
 
-  if (isOAuthCallback && !isAuthenticated) {
+  if (isOAuthCallback && !session) {
     return (
       <MantineProvider>
         <AuthLayout>
@@ -79,22 +60,19 @@ function App() {
             returnPath="/"
             onSuccess={handleLoginSuccess}
             onError={handleError}
-            onContinue={() => {
-              window.location.href = '/';
-            }}
           />
         </AuthLayout>
       </MantineProvider>
     );
   }
 
-  if (isAuthenticated) {
+  if (session) {
     return (
       <MantineProvider>
         <AuthLayout>
           <Paper p="xl" withBorder>
             <Text ta="center" fw={500} mb="md">
-              Welcome, {accountName}.
+              Welcome, {session.accountName}.
             </Text>
             <Button onClick={handleLogout} color="red" fullWidth>
               Logout

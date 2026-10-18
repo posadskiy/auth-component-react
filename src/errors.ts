@@ -31,6 +31,10 @@ export function mapAuthError(error: unknown, mode: 'login' | 'register' | 'oauth
       return { message: labels.accountExists, error: new Error(labels.accountExists) };
     }
 
+    if (status && status >= 500) {
+      return { message: labels.genericError, error: new Error(labels.genericError) };
+    }
+
     if (!error.response) {
       return { message: labels.genericError, error: new Error(labels.genericError) };
     }

@@ -31,7 +31,6 @@ export function OAuthButtons({
             color={appearance.color}
             fullWidth
             radius="md"
-            aria-label={provider.label}
             onClick={() => onSelect(provider.id)}
             loading={isActive}
             disabled={disabled || (activeProvider !== null && !isActive)}

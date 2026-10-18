@@ -13,6 +13,11 @@ export interface AuthLabels {
   haveAccount: string;
   signIn: string;
   orContinueWithEmail: string;
+  orContinueWithUsername: string;
+  confirmPassword: string;
+  passwordTooShort: string;
+  passwordMismatch: string;
+  required: string;
   invalidCredentials: string;
   accountExists: string;
   genericError: string;
@@ -50,6 +55,11 @@ export const defaultLabels: AuthLabels = {
   haveAccount: 'Already have an account?',
   signIn: 'Sign in',
   orContinueWithEmail: 'Or continue with email',
+  orContinueWithUsername: 'Or continue with username',
+  confirmPassword: 'Confirm password',
+  passwordTooShort: 'Password must be at least 8 characters.',
+  passwordMismatch: 'Passwords do not match.',
+  required: 'This field is required.',
   invalidCredentials: 'Invalid credentials',
   accountExists: 'An account with these details already exists',
   genericError: 'Something went wrong. Please try again.',

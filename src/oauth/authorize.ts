@@ -37,10 +37,33 @@ export function buildAuthorizeUrl(oauthApiUrl: string, provider: OAuthProvider, 
   return url.toString();
 }
 
-export function resolveOAuthReturnTo(returnTo?: string): string {
+export function resolveOAuthReturnTo(returnTo?: string, allowedReturnToHosts?: string[]): string {
   const current = `${window.location.origin}${window.location.pathname}`;
   if (!returnTo) return current;
-  return new URL(returnTo, window.location.origin).toString();
+
+  let url: URL;
+  try {
+    url = new URL(returnTo, window.location.origin);
+  } catch {
+    throw new Error('OAuth return URL is invalid.');
+  }
+
+  if (url.origin === window.location.origin) return url.toString();
+
+  const hostname = url.hostname.toLowerCase();
+  const isLocal = LOCAL_HOSTS.has(hostname);
+  const https = url.protocol === 'https:';
+  const localHttp = url.protocol === 'http:' && isLocal;
+  if (!https && !localHttp) {
+    throw new Error('OAuth return URL must use HTTPS.');
+  }
+
+  const allowed = new Set((allowedReturnToHosts ?? []).map((host) => host.toLowerCase()));
+  if (!allowed.has(hostname)) {
+    throw new Error('OAuth return URL host is not allowed.');
+  }
+
+  return url.toString();
 }
 
 export function beginOAuthAuthorization(options: {
@@ -48,14 +71,19 @@ export function beginOAuthAuthorization(options: {
   oauthApiUrl?: string;
   oauthReturnTo?: string;
   allowedOAuthHosts?: string[];
+  allowedReturnToHosts?: string[];
 }): void {
-  const { provider, oauthApiUrl, oauthReturnTo, allowedOAuthHosts } = options;
+  const { provider, oauthApiUrl, oauthReturnTo, allowedOAuthHosts, allowedReturnToHosts } = options;
 
   if (!oauthApiUrl) {
     throw new Error('oauthApiUrl must be provided for OAuth');
   }
 
-  const url = buildAuthorizeUrl(oauthApiUrl, provider, resolveOAuthReturnTo(oauthReturnTo));
+  const url = buildAuthorizeUrl(
+    oauthApiUrl,
+    provider,
+    resolveOAuthReturnTo(oauthReturnTo, allowedReturnToHosts),
+  );
   assertSafeAuthorizationUri(url, allowedOAuthHosts);
   navigation.assign(url);
 }

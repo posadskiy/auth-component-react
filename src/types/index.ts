@@ -45,8 +45,10 @@ export interface AuthComponentProps {
   apiUrl?: string;
   authApi?: AuthApi;
   oauthApiUrl?: string;
-  /** Absolute or site-relative URL auth-service should redirect back to with `?code=`. */
+  /** Absolute or site-relative URL auth-service should redirect back to with `?code=`. Cross-origin values are rejected unless their host is listed in `allowedReturnToHosts`. */
   oauthReturnTo?: string;
+  /** Extra hosts allowed for `oauthReturnTo`. The current page origin is always allowed. */
+  allowedReturnToHosts?: string[];
   onError?: (error: Error) => void;
   enableOAuth?: boolean;
   providers?: OAuthProviderOption[];

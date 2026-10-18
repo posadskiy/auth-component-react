@@ -23,6 +23,7 @@ import { Login, Register } from 'auth-component-react';
 
 function App() {
   const [showRegister, setShowRegister] = useState(false);
+  const [, setAccessToken] = useState<string | null>(null);
 
   if (showRegister) {
     return (
@@ -45,7 +46,8 @@ function App() {
         oauthApiUrl="http://localhost:8100"
         providers={['apple', 'google']}
         onSuccess={(response) => {
-          localStorage.setItem('token', response.access_token);
+          // Keep the access token in memory. Do not write it to localStorage or sessionStorage.
+          setAccessToken(response.access_token);
         }}
         onSwitchToRegister={() => setShowRegister(true)}
       />
@@ -54,11 +56,11 @@ function App() {
 }
 ```
 
-Password login posts `{ username, password }` to `apiUrl` and expects `{ access_token, expires_in, username?, userId? }`.
+Password login posts `{ username, password }` to `apiUrl` and expects `{ access_token, expires_in, username?, userId? }`. Hold `access_token` in memory. A refresh token, if you use one, belongs in an httpOnly cookie set by your backend, not in browser storage.
 
 Registration posts `{ username, email, password }` to `apiUrl` and expects `{ id, username, email }`.
 
-OAuth does not derive its base URL from `apiUrl`. Pass `oauthApiUrl`. A provider button navigates the browser to `${oauthApiUrl}/oauth2/authorize/{provider}?return_to=...` so the auth host can set its browser cookie. `oauthReturnTo` is where that host should send the browser back; it receives only `?code=`. The auth host must be HTTPS, or HTTP on localhost.
+OAuth does not derive its base URL from `apiUrl`. Pass `oauthApiUrl`. A provider button navigates the browser to `${oauthApiUrl}/oauth2/authorize/{provider}?return_to=...` so the auth host can set its browser cookie. `oauthReturnTo` is where that host should send the browser back; it receives only `?code=`. A relative return URL stays on the current origin. An absolute return URL on another host is rejected unless that host is listed in `allowedReturnToHosts`. The auth host must be HTTPS, or HTTP on localhost.
 
 ### Custom API
 
@@ -76,7 +78,7 @@ OAuth does not derive its base URL from `apiUrl`. Pass `oauthApiUrl`. A provider
     },
   }}
   onSuccess={(response) => {
-    localStorage.setItem('token', response.access_token);
+    setAccessToken(response.access_token);
   }}
 />
 ```
@@ -90,7 +92,7 @@ Mount this on the URL you passed as `oauthReturnTo`. The auth host redirects the
   oauthApiUrl="http://localhost:8100"
   returnPath="/"
   onSuccess={(tokens) => {
-    localStorage.setItem('token', tokens.access_token);
+    setAccessToken(tokens.access_token);
   }}
   onError={(error) => {
     console.error(error);
@@ -98,7 +100,7 @@ Mount this on the URL you passed as `oauthReturnTo`. The auth host redirects the
 />
 ```
 
-`onSuccess` receives the tokens. The component does not render them.
+`onSuccess` receives the tokens. The component does not render them. The sample above keeps only the access token in memory. Do not store `refresh_token` in localStorage or sessionStorage. Registration requires a password of at least 8 characters and a matching confirmation. Login copy says “username”; registration copy says “email”.
 
 ### Providers
 

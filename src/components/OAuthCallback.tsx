@@ -3,7 +3,7 @@ import { Button, Container, Loader, Paper, Stack, Text, Title } from '@mantine/c
 import axios from 'axios';
 import { mapAuthError } from '../errors';
 import { resolveLabels, type AuthLabels } from '../labels';
-import { navigation } from '../navigation';
+import { navigation, safeAppPath, stripOAuthQuery } from '../navigation';
 import { subscribeFinalize } from '../oauth/finalize';
 import type { OAuthTokenResponse } from '../types';
 
@@ -51,6 +51,7 @@ export function OAuthCallback({
     if (!code) {
       setStatus('error');
       setMessage(currentLabels.callbackMissingCode);
+      navigation.replacePath(stripOAuthQuery(window.location.href));
       onErrorRef.current(new Error(currentLabels.callbackMissingCode));
       return;
     }
@@ -64,7 +65,7 @@ export function OAuthCallback({
         setStatus('success');
         setMessage(labelsRef.current.callbackSuccessMessage);
         onSuccessRef.current(data);
-        navigation.replacePath(returnPathRef.current ?? window.location.pathname);
+        navigation.replacePath(safeAppPath(returnPathRef.current) ?? stripOAuthQuery(window.location.href));
       },
       (caught: unknown) => {
         if (!active) return;
@@ -72,6 +73,7 @@ export function OAuthCallback({
         const mapped = mapAuthError(caught, 'oauth', labelsRef.current);
         setStatus('error');
         setMessage(mapped.message);
+        navigation.replacePath(stripOAuthQuery(window.location.href));
         onErrorRef.current(mapped.error);
       },
     );
@@ -87,9 +89,8 @@ export function OAuthCallback({
       onContinueRef.current();
       return;
     }
-    if (returnPathRef.current) {
-      navigation.assign(returnPathRef.current);
-    }
+    const next = safeAppPath(returnPathRef.current);
+    if (next) navigation.replacePath(next);
   };
 
   const showContinue = status === 'success' && (onContinue || returnPath);
@@ -97,7 +98,7 @@ export function OAuthCallback({
   return (
     <Container size="xs" className={className} style={style}>
       <Paper radius="md" p="xl" withBorder style={{ width: '100%' }}>
-        <Stack align="center" gap="md">
+        <Stack align="center" gap="md" role="status" aria-live="polite">
           <Title order={3}>
             {status === 'pending'
               ? labels.callbackPendingTitle

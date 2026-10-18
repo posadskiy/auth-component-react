@@ -8,6 +8,7 @@ export function useOAuthAction(options: {
   oauthApiUrl?: string;
   oauthReturnTo?: string;
   allowedOAuthHosts?: string[];
+  allowedReturnToHosts?: string[];
   onError?: (error: Error) => void;
   disabled: boolean;
   labels: AuthLabels;
@@ -29,6 +30,7 @@ export function useOAuthAction(options: {
         oauthApiUrl: options.oauthApiUrl,
         oauthReturnTo: options.oauthReturnTo,
         allowedOAuthHosts: options.allowedOAuthHosts,
+        allowedReturnToHosts: options.allowedReturnToHosts,
       });
     } catch (caught) {
       const mapped = mapAuthError(caught, 'oauth', options.labels);

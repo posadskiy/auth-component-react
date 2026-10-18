@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { OAuthTokenResponse } from '../types';
+import { isOAuthTokenResponse } from '../validate';
 
 type Inflight = {
   controller: AbortController;
@@ -21,7 +22,12 @@ export function subscribeFinalize(oauthApiUrl: string, code: string): {
     const controller = new AbortController();
     const promise = axios
       .post<OAuthTokenResponse>(`${base}/oauth2/finalize`, { code }, { signal: controller.signal })
-      .then((response) => response.data);
+      .then((response) => {
+        if (!isOAuthTokenResponse(response.data)) {
+          throw new Error('The auth service returned an unexpected response.');
+        }
+        return response.data;
+      });
 
     entry = { controller, promise, subscribers: 0 };
     inflight.set(key, entry);

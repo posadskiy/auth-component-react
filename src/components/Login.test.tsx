@@ -38,7 +38,10 @@ describe('Login', () => {
 
   it('shows loading only on the clicked provider and navigates to the auth host', async () => {
     const user = userEvent.setup();
-    renderLogin({ oauthReturnTo: 'https://app.example/oauth/callback' });
+    renderLogin({
+      oauthReturnTo: 'https://app.example/oauth/callback',
+      allowedReturnToHosts: ['app.example'],
+    });
 
     await user.click(screen.getByRole('button', { name: 'Sign in with Apple' }));
 
@@ -71,7 +74,7 @@ describe('Login', () => {
     expect(axios.post).not.toHaveBeenCalled();
   });
 
-  it('shows invalid credentials for a 401 and the server message for other failures', async () => {
+  it('shows invalid credentials for a 401, a generic message for a 500, and the server message for a 400', async () => {
     const user = userEvent.setup();
     post.mockRejectedValueOnce({
       isAxiosError: true,
@@ -93,7 +96,28 @@ describe('Login', () => {
     });
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Database unavailable');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong. Please try again.');
+
+    post.mockRejectedValueOnce({
+      isAxiosError: true,
+      message: 'Request failed with status code 400',
+      response: { status: 400, data: { message: 'Check the username' } },
+    });
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Check the username');
+  });
+
+  it('does not follow a cross-origin return url unless its host is allowed', async () => {
+    const user = userEvent.setup();
+    const onError = vi.fn();
+    renderLogin({ onError, oauthReturnTo: 'https://evil.example/steal' });
+
+    await user.click(screen.getByRole('button', { name: 'Sign in with Apple' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('OAuth return URL host is not allowed.');
+    expect(navigation.assign).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalled();
   });
 
   it('shows an OAuth error and does not redirect to an unsafe auth host', async () => {

@@ -68,5 +68,30 @@ describe('OAuthCallback', () => {
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(window.location.pathname).toBe('/home');
+    expect(window.location.search).not.toContain('code=');
+  });
+
+  it('removes the code from the url when finalize fails', async () => {
+    post.mockRejectedValue({
+      isAxiosError: true,
+      message: 'Request failed with status code 500',
+      response: { status: 500, data: { message: 'token store down' } },
+    });
+
+    renderCallback('?code=abc&foo=1');
+
+    expect(await screen.findByText('Something went wrong. Please try again.')).toBeInTheDocument();
+    expect(window.location.search).toBe('?foo=1');
+    expect(screen.queryByText('abc')).not.toBeInTheDocument();
+  });
+
+  it('does not sign in when the token payload is incomplete', async () => {
+    post.mockResolvedValue({ data: { access_token: 'only-access' } });
+    const { onSuccess, onError } = renderCallback('?code=abc');
+
+    expect(await screen.findByText('The auth service returned an unexpected response.')).toBeInTheDocument();
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalled();
+    expect(window.location.search).not.toContain('code=');
   });
 });
