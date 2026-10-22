@@ -1,11 +1,11 @@
 # Auth Component React
 
-React login, registration, and OAuth callback components built with Mantine 7 and TypeScript.
+React login, registration, and OAuth callback components built with Mantine 9 and TypeScript.
 
 ## Installation
 
 ```bash
-npm install auth-component-react @mantine/core react react-dom
+npm install auth-component-react @mantine/core @mantine/hooks react react-dom
 ```
 
 Import Mantine's stylesheet once in the host application:

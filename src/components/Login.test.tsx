@@ -65,7 +65,7 @@ describe('Login', () => {
     renderLogin();
 
     await user.type(screen.getByRole('textbox', { name: /username/i }), 'ada');
-    await user.type(screen.getByLabelText(/password/i), 'secret');
+    await user.type(screen.getByLabelText(/^password/i), 'secret');
     await user.click(screen.getByRole('button', { name: 'Sign in with Apple' }));
 
     const form = screen.getByRole('textbox', { name: /username/i }).closest('form');
@@ -84,7 +84,7 @@ describe('Login', () => {
     renderLogin();
 
     await user.type(screen.getByRole('textbox', { name: /username/i }), 'ada');
-    await user.type(screen.getByLabelText(/password/i), 'wrong');
+    await user.type(screen.getByLabelText(/^password/i), 'wrong');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
     expect(await screen.findByText('Invalid credentials')).toBeInTheDocument();
@@ -143,7 +143,7 @@ describe('Login', () => {
     expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Create account' })).not.toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /username/i })).toHaveAttribute('autocomplete', 'username');
-    expect(screen.getByLabelText(/password/i)).toHaveAttribute('autocomplete', 'current-password');
+    expect(screen.getByLabelText(/^password/i)).toHaveAttribute('autocomplete', 'current-password');
   });
 
   it('renders providers in the given order and a working register link', async () => {
