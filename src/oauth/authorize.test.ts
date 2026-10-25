@@ -19,6 +19,8 @@ describe('assertSafeAuthorizationUri', () => {
     expect(() => resolveOAuthReturnTo('https://evil.example/steal')).toThrow(/not allowed/);
     expect(() => resolveOAuthReturnTo('javascript:alert(1)')).toThrow(/HTTPS/);
     expect(resolveOAuthReturnTo('https://app.example/cb', ['app.example'])).toBe('https://app.example/cb');
+    expect(resolveOAuthReturnTo('costy://oauth/callback', ['costy://oauth/callback'])).toBe('costy://oauth/callback');
+    expect(() => resolveOAuthReturnTo('costy://oauth/callback')).toThrow(/HTTPS/);
   });
 
   it('rejects hosts outside the allow list', () => {

@@ -50,6 +50,12 @@ export function resolveOAuthReturnTo(returnTo?: string, allowedReturnToHosts?: s
 
   if (url.origin === window.location.origin) return url.toString();
 
+  // Entries that contain :// are exact return URLs, including app schemes such as costy://oauth/callback.
+  const exactReturnUrls = new Set(
+    (allowedReturnToHosts ?? []).filter((entry) => entry.includes('://')).map((entry) => entry.toLowerCase()),
+  );
+  if (exactReturnUrls.has(url.href.toLowerCase())) return url.href;
+
   const hostname = url.hostname.toLowerCase();
   const isLocal = LOCAL_HOSTS.has(hostname);
   const https = url.protocol === 'https:';
