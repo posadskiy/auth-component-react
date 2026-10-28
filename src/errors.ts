@@ -3,7 +3,7 @@ import type { AuthLabels } from './labels';
 
 export interface MappedAuthError {
   message: string;
-  field?: 'username';
+  field?: 'email';
   error: Error;
 }
 
@@ -18,13 +18,21 @@ function readServerMessage(data: unknown): string | undefined {
   return undefined;
 }
 
-export function mapAuthError(error: unknown, mode: 'login' | 'register' | 'oauth', labels: AuthLabels): MappedAuthError {
+export function mapAuthError(
+  error: unknown,
+  mode: 'login' | 'register' | 'oauth' | 'forgot' | 'reset',
+  labels: AuthLabels,
+): MappedAuthError {
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
     const serverMessage = readServerMessage(error.response?.data);
 
+    if (status === 429) {
+      return { message: labels.tooManyAttempts, error: new Error(labels.tooManyAttempts) };
+    }
+
     if (mode === 'login' && status === 401) {
-      return { message: labels.invalidCredentials, field: 'username', error: new Error(labels.invalidCredentials) };
+      return { message: labels.invalidCredentials, field: 'email', error: new Error(labels.invalidCredentials) };
     }
 
     if (mode === 'register' && status === 409) {
@@ -39,7 +47,13 @@ export function mapAuthError(error: unknown, mode: 'login' | 'register' | 'oauth
       return { message: labels.genericError, error: new Error(labels.genericError) };
     }
 
-    const message = serverMessage || (mode === 'oauth' ? labels.oauthError : labels.genericError);
+    const message =
+      serverMessage ||
+      (mode === 'reset' && status === 400
+        ? labels.invalidOrExpiredToken
+        : mode === 'oauth'
+          ? labels.oauthError
+          : labels.genericError);
     return { message, error: new Error(message) };
   }
 

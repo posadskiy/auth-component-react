@@ -3,13 +3,16 @@ import { Alert, Anchor, Divider, Paper, PasswordInput, Stack, Text, TextInput, T
 import axios from 'axios';
 import { mapAuthError } from '../errors';
 import { resolveLabels } from '../labels';
+import { resolveLinkOrigin } from '../linkOrigin';
 import { resolveProviders } from '../oauth/resolveProviders';
 import type { AuthResponse, LoginProps, RegisterProps, RegisterResponse } from '../types';
-import { isAuthResponse, isRegisterResponse } from '../validate';
+import { isAuthResponse, isEmailAddress, isRegisterResponse, passwordIssue } from '../validate';
 import { OAuthButtons } from './OAuthButtons';
 import { useOAuthAction } from './useOAuthAction';
 
-type CredentialsFormProps = (LoginProps & { mode: 'login' }) | (RegisterProps & { mode: 'register' });
+type CredentialsFormProps =
+  | (LoginProps & { mode: 'login'; onForgotPassword?: () => void })
+  | (RegisterProps & { mode: 'register' });
 
 export function CredentialsForm(props: CredentialsFormProps) {
   const {
@@ -34,17 +37,16 @@ export function CredentialsForm(props: CredentialsFormProps) {
     style,
     title,
     submitButtonText,
+    linkOrigin: linkOriginProp,
   } = props;
 
   const labels = resolveLabels(labelOverrides);
   const errorId = useId();
-  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -89,19 +91,24 @@ export function CredentialsForm(props: CredentialsFormProps) {
   const switchToLogin = mode === 'register' ? props.onSwitchToLogin : undefined;
   const showRegisterLink = mode === 'login' ? props.showRegisterLink !== false : false;
   const showLoginLink = mode === 'register' ? props.showLoginLink !== false : false;
+  const onForgotPassword = props.mode === 'login' ? props.onForgotPassword : undefined;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (busy) return;
 
     setFormError(null);
-    setUsernameError(null);
     setPasswordError(null);
     setConfirmError(null);
     setEmailError(null);
 
-    if (!username.trim()) {
-      setUsernameError(labels.required);
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setEmailError(labels.required);
+      return;
+    }
+    if (!isEmailAddress(trimmedEmail)) {
+      setEmailError(labels.invalidEmail);
       return;
     }
     if (!password) {
@@ -109,12 +116,13 @@ export function CredentialsForm(props: CredentialsFormProps) {
       return;
     }
     if (props.mode === 'register') {
-      if (!email.trim()) {
-        setEmailError(labels.required);
+      const issue = passwordIssue(password, [trimmedEmail]);
+      if (issue === 'length') {
+        setPasswordError(labels.passwordTooShort);
         return;
       }
-      if (password.length < 8) {
-        setPasswordError(labels.passwordTooShort);
+      if (issue === 'identity') {
+        setPasswordError(labels.passwordMatchesIdentity);
         return;
       }
       if (password !== confirmPassword) {
@@ -133,11 +141,11 @@ export function CredentialsForm(props: CredentialsFormProps) {
           throw new Error('Either apiUrl or authApi.login must be provided');
         }
         const response = authApi?.login
-          ? await authApi.login(username.trim(), password)
+          ? await authApi.login(trimmedEmail, password)
           : (
               await axios.post<AuthResponse>(
                 apiUrl as string,
-                { username: username.trim(), password },
+                { email: trimmedEmail, password },
                 { signal: controller.signal },
               )
             ).data;
@@ -148,9 +156,10 @@ export function CredentialsForm(props: CredentialsFormProps) {
         if (!authApi?.register && !apiUrl) {
           throw new Error('Either apiUrl or authApi.register must be provided');
         }
-        const payload = { username: username.trim(), email: email.trim(), password };
+        const linkOrigin = resolveLinkOrigin(linkOriginProp);
+        const payload = { email: trimmedEmail, password, linkOrigin };
         const response = authApi?.register
-          ? await authApi.register(payload.username, payload.email, payload.password)
+          ? await authApi.register(payload.email, payload.password, payload.linkOrigin)
           : (
               await axios.post<RegisterResponse>(apiUrl as string, payload, { signal: controller.signal })
             ).data;
@@ -162,7 +171,7 @@ export function CredentialsForm(props: CredentialsFormProps) {
       if (!mountedRef.current) return;
       if (axios.isCancel(caught) || (axios.isAxiosError(caught) && caught.code === 'ERR_CANCELED')) return;
       const mapped = mapAuthError(caught, mode, labels);
-      if (mapped.field === 'username') setUsernameError(mapped.message);
+      if (mapped.field === 'email') setEmailError(mapped.message);
       else setFormError(mapped.message);
       onError?.(mapped.error);
     } finally {
@@ -204,7 +213,7 @@ export function CredentialsForm(props: CredentialsFormProps) {
 
       {providers.length > 0 && (
         <Divider
-          label={mode === 'login' ? labels.orContinueWithUsername : labels.orContinueWithEmail}
+          label={labels.orContinueWithEmail}
           labelPosition="center"
           my="xl"
         />
@@ -220,33 +229,19 @@ export function CredentialsForm(props: CredentialsFormProps) {
 
           <TextInput
             required
-            name="username"
-            autoComplete="username"
-            label={labels.username}
-            placeholder={mode === 'login' ? labels.usernamePlaceholder : labels.registerUsernamePlaceholder}
-            value={username}
+            name="email"
+            type="email"
+            autoComplete="email"
+            label={labels.email}
+            placeholder={labels.emailPlaceholder}
+            value={email}
             disabled={busy}
-            onChange={(event) => setUsername(event.target.value)}
-            error={usernameError}
+            error={emailError}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              setEmailError(null);
+            }}
           />
-
-          {mode === 'register' && (
-            <TextInput
-              required
-              name="email"
-              type="email"
-              autoComplete="email"
-              label={labels.email}
-              placeholder={labels.emailPlaceholder}
-              value={email}
-              disabled={busy}
-              error={emailError}
-              onChange={(event) => {
-                setEmail(event.target.value);
-                setEmailError(null);
-              }}
-            />
-          )}
 
           <PasswordInput
             required
@@ -278,6 +273,14 @@ export function CredentialsForm(props: CredentialsFormProps) {
                 setConfirmError(null);
               }}
             />
+          )}
+
+          {mode === 'login' && onForgotPassword && (
+            <Text ta="right">
+              <Anchor component="button" type="button" size="sm" disabled={busy} onClick={onForgotPassword}>
+                {labels.forgotPassword}
+              </Anchor>
+            </Text>
           )}
 
           <Button type="submit" loading={submitting} disabled={oauth.activeProvider !== null} fullWidth mt="xl">

@@ -1,9 +1,6 @@
 import type { OAuthProvider } from './oauth/providerIds';
 
 export interface AuthLabels {
-  username: string;
-  usernamePlaceholder: string;
-  registerUsernamePlaceholder: string;
   password: string;
   passwordPlaceholder: string;
   email: string;
@@ -13,11 +10,22 @@ export interface AuthLabels {
   haveAccount: string;
   signIn: string;
   orContinueWithEmail: string;
-  orContinueWithUsername: string;
   confirmPassword: string;
   passwordTooShort: string;
+  passwordMatchesIdentity: string;
   passwordMismatch: string;
   required: string;
+  invalidEmail: string;
+  forgotPassword: string;
+  forgotPasswordTitle: string;
+  forgotPasswordSubmit: string;
+  forgotPasswordSent: string;
+  backToSignIn: string;
+  tooManyAttempts: string;
+  invalidOrExpiredToken: string;
+  resetPasswordTitle: string;
+  resetPasswordSubmit: string;
+  resetPasswordSuccess: string;
   invalidCredentials: string;
   accountExists: string;
   genericError: string;
@@ -43,9 +51,6 @@ const providerLabels: Record<OAuthProvider, string> = {
 };
 
 export const defaultLabels: AuthLabels = {
-  username: 'Username',
-  usernamePlaceholder: 'Enter your username',
-  registerUsernamePlaceholder: 'Your username',
   password: 'Password',
   passwordPlaceholder: 'Your password',
   email: 'Email',
@@ -55,11 +60,22 @@ export const defaultLabels: AuthLabels = {
   haveAccount: 'Already have an account?',
   signIn: 'Sign in',
   orContinueWithEmail: 'Or continue with email',
-  orContinueWithUsername: 'Or continue with username',
   confirmPassword: 'Confirm password',
-  passwordTooShort: 'Password must be at least 8 characters.',
+  passwordTooShort: 'Password must be 10–72 characters.',
+  passwordMatchesIdentity: 'Password must not match your email.',
   passwordMismatch: 'Passwords do not match.',
   required: 'This field is required.',
+  invalidEmail: 'Enter a valid email address.',
+  forgotPassword: 'Forgot password?',
+  forgotPasswordTitle: 'Forgot password',
+  forgotPasswordSubmit: 'Send reset link',
+  forgotPasswordSent: 'If this account exists, we sent a link.',
+  backToSignIn: 'Back to sign in',
+  tooManyAttempts: 'Too many attempts. Please try again later.',
+  invalidOrExpiredToken: 'Invalid or expired token',
+  resetPasswordTitle: 'Choose a new password',
+  resetPasswordSubmit: 'Update password',
+  resetPasswordSuccess: 'Your password has been updated.',
   invalidCredentials: 'Invalid credentials',
   accountExists: 'An account with these details already exists',
   genericError: 'Something went wrong. Please try again.',

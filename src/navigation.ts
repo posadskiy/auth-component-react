@@ -18,6 +18,13 @@ export function stripOAuthQuery(href: string): string {
   return `${url.pathname}${search ? `?${search}` : ''}${url.hash}`;
 }
 
+export function stripResetToken(href: string): string {
+  const url = new URL(href);
+  url.searchParams.delete('token');
+  const search = url.searchParams.toString();
+  return `${url.pathname}${search ? `?${search}` : ''}${url.hash}`;
+}
+
 export const navigation = {
   assign(url: string) {
     window.location.assign(url);

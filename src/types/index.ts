@@ -5,25 +5,34 @@ import type { OAuthProvider } from '../oauth/providerIds';
 export interface AuthResponse {
   access_token: string;
   expires_in: number;
-  username?: string;
   userId?: string;
 }
 
 export interface LoginRequest {
-  username: string;
+  email: string;
   password: string;
 }
 
 export interface RegisterRequest {
-  username: string;
   email: string;
   password: string;
+  linkOrigin: string;
 }
 
 export interface RegisterResponse {
-  id: string;
-  username: string;
+  emailVerified: boolean;
+  id?: string;
+  email?: string;
+}
+
+export interface ForgotPasswordRequest {
   email: string;
+  linkOrigin: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  password: string;
 }
 
 export interface OAuthTokenResponse {
@@ -37,8 +46,10 @@ export type { OAuthProvider } from '../oauth/providerIds';
 export type OAuthProviderOption = OAuthProvider | { id: OAuthProvider; label?: string };
 
 export interface AuthApi {
-  login: (username: string, password: string) => Promise<AuthResponse>;
-  register?: (username: string, email: string, password: string) => Promise<RegisterResponse>;
+  login: (email: string, password: string) => Promise<AuthResponse>;
+  register?: (email: string, password: string, linkOrigin: string) => Promise<RegisterResponse>;
+  forgotPassword?: (email: string, linkOrigin: string) => Promise<void>;
+  resetPassword?: (token: string, password: string) => Promise<void>;
 }
 
 export interface AuthComponentProps {
@@ -62,12 +73,52 @@ export interface AuthComponentProps {
   labels?: Partial<AuthLabels>;
   className?: string;
   style?: CSSProperties;
+  /**
+   * Site origin included as `linkOrigin`, such as `https://grammarbar.com`.
+   * Defaults to `window.location.origin`. A path, query, hash, or non-HTTP(S) scheme is rejected.
+   */
+  linkOrigin?: string;
+  /**
+   * Origin that serves `/account/forgot-password` and `/account/reset-password`.
+   * Defaults to the origin of `apiUrl`.
+   */
+  accountApiUrl?: string;
 }
 
 export interface LoginProps extends AuthComponentProps {
   onSuccess?: (response: AuthResponse) => void;
   showRegisterLink?: boolean;
   onSwitchToRegister?: () => void;
+  showForgotPassword?: boolean;
+  title?: string;
+  submitButtonText?: string;
+}
+
+export interface ForgotPasswordProps {
+  apiUrl?: string;
+  accountApiUrl?: string;
+  authApi?: AuthApi;
+  linkOrigin?: string;
+  onBack?: () => void;
+  onError?: (error: Error) => void;
+  labels?: Partial<AuthLabels>;
+  className?: string;
+  style?: CSSProperties;
+  title?: string;
+  submitButtonText?: string;
+}
+
+export interface ResetPasswordProps {
+  apiUrl?: string;
+  accountApiUrl?: string;
+  authApi?: AuthApi;
+  /** Reset token. Defaults to the `token` query parameter. */
+  token?: string;
+  onSuccess?: () => void;
+  onError?: (error: Error) => void;
+  labels?: Partial<AuthLabels>;
+  className?: string;
+  style?: CSSProperties;
   title?: string;
   submitButtonText?: string;
 }

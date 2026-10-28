@@ -1,5 +1,5 @@
 import { MantineProvider } from '@mantine/core';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Register } from './Register';
@@ -40,27 +40,84 @@ describe('Register', () => {
     expect(screen.getByRole('textbox', { name: /email/i })).toHaveAttribute('autocomplete', 'email');
     expect(screen.getByLabelText(/^password/i)).toHaveAttribute('autocomplete', 'new-password');
 
-    await user.type(screen.getByRole('textbox', { name: /username/i }), 'ada');
     await user.type(screen.getByRole('textbox', { name: /email/i }), 'ada@example.com');
     await user.type(screen.getByLabelText(/^password/i), 'secret');
     await user.click(screen.getByRole('button', { name: 'Register' }));
-    expect(await screen.findByText('Password must be at least 8 characters.')).toBeInTheDocument();
+    expect(await screen.findByText('Password must be 10–72 characters.')).toBeInTheDocument();
     expect(post).not.toHaveBeenCalled();
 
     await user.clear(screen.getByLabelText(/^password/i));
-    await user.type(screen.getByLabelText(/^password/i), 'secret12');
-    await user.type(screen.getByLabelText(/confirm password/i), 'secret12');
+    await user.type(screen.getByLabelText(/^password/i), 'secret12ab');
+    await user.type(screen.getByLabelText(/confirm password/i), 'secret12ab');
     await user.click(screen.getByRole('button', { name: 'Register' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('An account with these details already exists');
     expect(post).toHaveBeenCalledWith(
       'http://localhost:8095/signup',
       {
-        username: 'ada',
         email: 'ada@example.com',
-        password: 'secret12',
+        password: 'secret12ab',
+        linkOrigin: window.location.origin,
       },
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
+  });
+
+  it('rejects a password that matches the email', async () => {
+    const user = userEvent.setup();
+    render(
+      <MantineProvider>
+        <Register apiUrl="http://localhost:8095/signup" />
+      </MantineProvider>,
+    );
+
+    await user.type(screen.getByRole('textbox', { name: /email/i }), 'ada@example.com');
+    await user.type(screen.getByLabelText(/^password/i), 'ada@example.com');
+    await user.type(screen.getByLabelText(/confirm password/i), 'ada@example.com');
+    await user.click(screen.getByRole('button', { name: 'Register' }));
+
+    expect(await screen.findByText('Password must not match your email.')).toBeInTheDocument();
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('sends only the site origin and treats emailVerified false as a created account', async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    post.mockResolvedValue({ status: 201, data: { emailVerified: false } });
+
+    render(
+      <MantineProvider>
+        <Register apiUrl="http://localhost:8095/signup" linkOrigin="https://grammarbar.com/" onSuccess={onSuccess} />
+      </MantineProvider>,
+    );
+
+    await user.type(screen.getByRole('textbox', { name: /email/i }), 'ada@example.com');
+    await user.type(screen.getByLabelText(/^password/i), 'secret12ab');
+    await user.type(screen.getByLabelText(/confirm password/i), 'secret12ab');
+    await user.click(screen.getByRole('button', { name: 'Register' }));
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith({ emailVerified: false }));
+    expect(post).toHaveBeenCalledWith(
+      'http://localhost:8095/signup',
+      expect.objectContaining({ linkOrigin: 'https://grammarbar.com' }),
+      expect.any(Object),
+    );
+  });
+
+  it('does not post when linkOrigin includes a path', async () => {
+    const user = userEvent.setup();
+    render(
+      <MantineProvider>
+        <Register apiUrl="http://localhost:8095/signup" linkOrigin="https://grammarbar.com/signup" />
+      </MantineProvider>,
+    );
+
+    await user.type(screen.getByRole('textbox', { name: /email/i }), 'ada@example.com');
+    await user.type(screen.getByLabelText(/^password/i), 'secret12ab');
+    await user.type(screen.getByLabelText(/confirm password/i), 'secret12ab');
+    await user.click(screen.getByRole('button', { name: 'Register' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('linkOrigin must be a site origin, such as https://grammarbar.com');
+    expect(post).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,5 @@
 import { MantineProvider } from '@mantine/core';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -64,11 +64,11 @@ describe('Login', () => {
     const user = userEvent.setup();
     renderLogin();
 
-    await user.type(screen.getByRole('textbox', { name: /username/i }), 'ada');
+    await user.type(screen.getByRole('textbox', { name: /email/i }), 'ada@example.com');
     await user.type(screen.getByLabelText(/^password/i), 'secret');
     await user.click(screen.getByRole('button', { name: 'Sign in with Apple' }));
 
-    const form = screen.getByRole('textbox', { name: /username/i }).closest('form');
+    const form = screen.getByRole('textbox', { name: /email/i }).closest('form');
     form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     expect(axios.post).not.toHaveBeenCalled();
@@ -83,7 +83,7 @@ describe('Login', () => {
     });
     renderLogin();
 
-    await user.type(screen.getByRole('textbox', { name: /username/i }), 'ada');
+    await user.type(screen.getByRole('textbox', { name: /email/i }), 'ada@example.com');
     await user.type(screen.getByLabelText(/^password/i), 'wrong');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
@@ -101,11 +101,11 @@ describe('Login', () => {
     post.mockRejectedValueOnce({
       isAxiosError: true,
       message: 'Request failed with status code 400',
-      response: { status: 400, data: { message: 'Check the username' } },
+      response: { status: 400, data: { message: 'Check the email' } },
     });
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Check the username');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Check the email');
   });
 
   it('does not follow a cross-origin return url unless its host is allowed', async () => {
@@ -142,7 +142,7 @@ describe('Login', () => {
     expect(screen.getByRole('button', { name: 'Sign in with Apple' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Create account' })).not.toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: /username/i })).toHaveAttribute('autocomplete', 'username');
+    expect(screen.getByRole('textbox', { name: /email/i })).toHaveAttribute('autocomplete', 'email');
     expect(screen.getByLabelText(/^password/i)).toHaveAttribute('autocomplete', 'current-password');
   });
 
@@ -157,5 +157,77 @@ describe('Login', () => {
 
     await user.click(screen.getByRole('button', { name: 'Create account' }));
     expect(onSwitchToRegister).toHaveBeenCalledOnce();
+  });
+
+  it('signs in with a short password and does not send linkOrigin', async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    post.mockResolvedValue({
+      data: { access_token: 'token-value', expires_in: 3600, userId: 'ada' },
+    });
+    renderLogin({ onSuccess });
+
+    await user.type(screen.getByRole('textbox', { name: /email/i }), 'ada@example.com');
+    await user.type(screen.getByLabelText(/^password/i), 'secret');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await waitFor(() =>
+      expect(onSuccess).toHaveBeenCalledWith(
+        expect.objectContaining({ access_token: 'token-value', expires_in: 3600 }),
+      ),
+    );
+    expect(post).toHaveBeenCalledWith(
+      'http://localhost:8100/login',
+      { email: 'ada@example.com', password: 'secret' },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it('asks for a reset link and always shows the same result', async () => {
+    const user = userEvent.setup();
+    post.mockResolvedValue({ status: 204, data: { message: 'no such user' } });
+    renderLogin({ accountApiUrl: 'http://localhost:8100/login', linkOrigin: 'https://grammarbar.com' });
+
+    await user.click(screen.getByRole('button', { name: 'Forgot password?' }));
+    await user.type(screen.getByRole('textbox', { name: /email/i }), 'ada@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send reset link' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('If this account exists, we sent a link.');
+    expect(screen.queryByText('no such user')).not.toBeInTheDocument();
+    expect(post).toHaveBeenCalledWith(
+      'http://localhost:8100/account/forgot-password',
+      { email: 'ada@example.com', linkOrigin: 'https://grammarbar.com' },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it('shows a rate-limit message and can return to sign in', async () => {
+    const user = userEvent.setup();
+    post.mockRejectedValue({
+      isAxiosError: true,
+      message: 'Request failed with status code 429',
+      response: { status: 429, data: { message: 'slow down' } },
+    });
+    renderLogin();
+
+    await user.click(screen.getByRole('button', { name: 'Forgot password?' }));
+    await user.type(screen.getByRole('textbox', { name: /email/i }), 'ada@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send reset link' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Too many attempts. Please try again later.');
+    expect(screen.queryByText('slow down')).not.toBeInTheDocument();
+    expect(post).toHaveBeenCalledWith(
+      'http://localhost:8100/account/forgot-password',
+      { email: 'ada@example.com', linkOrigin: window.location.origin },
+      expect.any(Object),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Back to sign in' }));
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+  });
+
+  it('hides the forgot-password link when disabled', () => {
+    renderLogin({ showForgotPassword: false });
+    expect(screen.queryByRole('button', { name: 'Forgot password?' })).not.toBeInTheDocument();
   });
 });

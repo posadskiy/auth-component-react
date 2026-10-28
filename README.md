@@ -56,9 +56,9 @@ function App() {
 }
 ```
 
-Password login posts `{ username, password }` to `apiUrl` and expects `{ access_token, expires_in, username?, userId? }`. Hold `access_token` in memory. A refresh token, if you use one, belongs in an httpOnly cookie set by your backend, not in browser storage.
+Password login posts `{ email, password }` to `apiUrl` and expects `{ access_token, expires_in, userId? }`. Hold `access_token` in memory. A refresh token, if you use one, belongs in an httpOnly cookie set by your backend, not in browser storage. Login succeeds while `emailVerified` is false. The access token claim that records that state is `email_verified`. This package does not read the claim, and it does not render a verify-email page.
 
-Registration posts `{ username, email, password }` to `apiUrl` and expects `{ id, username, email }`.
+Registration posts `{ email, password, linkOrigin }` to `apiUrl`. `linkOrigin` is the site origin only, such as `https://grammarbar.com`, with no path, query, hash, or custom scheme. It defaults to `window.location.origin`. Pass `linkOrigin` when the public origin differs from the page origin. The password must be 10–72 characters and must not match the email. A 201 response with `{ emailVerified: false }` means the account was created. A mail failure still creates the account, so a 201 is success.
 
 OAuth does not derive its base URL from `apiUrl`. Pass `oauthApiUrl`. A provider button navigates the browser to `${oauthApiUrl}/oauth2/authorize/{provider}?return_to=...` so the auth host can set its browser cookie. `oauthReturnTo` is where that host should send the browser back; it receives only `?code=`. A relative return URL stays on the current origin. An absolute return URL on another host is rejected unless that host is listed in `allowedReturnToHosts`. The auth host must be HTTPS, or HTTP on localhost.
 
@@ -67,11 +67,11 @@ OAuth does not derive its base URL from `apiUrl`. Pass `oauthApiUrl`. A provider
 ```tsx
 <Login
   authApi={{
-    login: async (username, password) => {
+    login: async (email, password) => {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
       });
       if (!response.ok) throw new Error('Login failed');
       return response.json();
@@ -100,7 +100,28 @@ Mount this on the URL you passed as `oauthReturnTo`. The auth host redirects the
 />
 ```
 
-`onSuccess` receives the tokens. The component does not render them. The sample above keeps only the access token in memory. Do not store `refresh_token` in localStorage or sessionStorage. Registration requires a password of at least 8 characters and a matching confirmation. Login copy says “username”; registration copy says “email”.
+`onSuccess` receives the tokens. The component does not render them. The sample above keeps only the access token in memory. Do not store `refresh_token` in localStorage or sessionStorage. Registration requires a password of 10–72 characters, different from the email, and a matching confirmation. Login and registration both ask for email.
+
+### Forgot password
+
+The login card includes “Forgot password?”. That form posts `{ email, linkOrigin }` to `${accountApiUrl}/account/forgot-password`. `accountApiUrl` defaults to the origin of `apiUrl`, so `http://localhost:8100/login` calls `http://localhost:8100/account/forgot-password`. An unknown email is also 204. The screen always shows “If this account exists, we sent a link.” Too many tries is 429 and shows a rate-limit message. Set `showForgotPassword={false}` to hide the link.
+
+### Reset password
+
+Mount `ResetPassword` on `/reset-password`. The email link contains only `?token=`, and the link lasts 1 hour. The form posts `{ token, password }` to `${accountApiUrl}/account/reset-password`. The new password must be 10–72 characters. 204 calls `onSuccess`; use that to show the login screen. This revokes every refresh token for the account. It does not set `emailVerified`, and it does not log the user in. A bad, used, or expired token is 400 with “Invalid or expired token”.
+
+```tsx
+import { ResetPassword } from 'auth-component-react';
+
+<ResetPassword
+  accountApiUrl="http://localhost:8100"
+  onSuccess={() => {
+    window.history.replaceState({}, '', '/');
+  }}
+/>
+```
+
+Email verification, including `/verify-email` and resend, is outside this package. Signup and forgot-password still send `linkOrigin` so the account service can build those links.
 
 ### Providers
 
