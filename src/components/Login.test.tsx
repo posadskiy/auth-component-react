@@ -162,7 +162,7 @@ describe('Login', () => {
     expect(onSwitchToRegister).toHaveBeenCalledOnce();
   });
 
-  it('signs in with a short password and does not send linkOrigin', async () => {
+  it('signs in with a short password and sends the page origin', async () => {
     const user = userEvent.setup();
     const onSuccess = vi.fn();
     post.mockResolvedValue({
@@ -181,7 +181,7 @@ describe('Login', () => {
     );
     expect(post).toHaveBeenCalledWith(
       'http://localhost:8100/login',
-      { email: 'ada@example.com', password: 'secret' },
+      { email: 'ada@example.com', password: 'secret', linkOrigin: 'http://localhost:3000' },
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });

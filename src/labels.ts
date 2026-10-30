@@ -27,6 +27,7 @@ export interface AuthLabels {
   resetPasswordSubmit: string;
   resetPasswordSuccess: string;
   invalidCredentials: string;
+  confirmEmail: string;
   accountExists: string;
   genericError: string;
   oauthError: string;
@@ -77,6 +78,7 @@ export const defaultLabels: AuthLabels = {
   resetPasswordSubmit: 'Update password',
   resetPasswordSuccess: 'Your password has been updated.',
   invalidCredentials: 'Invalid credentials',
+  confirmEmail: 'Confirm your email before signing in.',
   accountExists: 'An account with these details already exists',
   genericError: 'Something went wrong. Please try again.',
   oauthError: 'OAuth authorization failed',

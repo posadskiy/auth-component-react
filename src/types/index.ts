@@ -46,7 +46,7 @@ export type { OAuthProvider } from '../oauth/providerIds';
 export type OAuthProviderOption = OAuthProvider | { id: OAuthProvider; label?: string };
 
 export interface AuthApi {
-  login: (email: string, password: string) => Promise<AuthResponse>;
+  login: (email: string, password: string, linkOrigin: string) => Promise<AuthResponse>;
   register?: (email: string, password: string, linkOrigin: string) => Promise<RegisterResponse>;
   forgotPassword?: (email: string, linkOrigin: string) => Promise<void>;
   resetPassword?: (token: string, password: string) => Promise<void>;

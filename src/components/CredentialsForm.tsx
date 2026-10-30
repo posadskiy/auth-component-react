@@ -140,12 +140,13 @@ export function CredentialsForm(props: CredentialsFormProps) {
         if (!authApi?.login && !apiUrl) {
           throw new Error('Either apiUrl or authApi.login must be provided');
         }
+        const linkOrigin = resolveLinkOrigin(linkOriginProp);
         const response = authApi?.login
-          ? await authApi.login(trimmedEmail, password)
+          ? await authApi.login(trimmedEmail, password, linkOrigin)
           : (
               await axios.post<AuthResponse>(
                 apiUrl as string,
-                { email: trimmedEmail, password },
+                { email: trimmedEmail, password, linkOrigin },
                 { signal: controller.signal },
               )
             ).data;

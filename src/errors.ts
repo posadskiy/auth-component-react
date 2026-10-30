@@ -35,6 +35,10 @@ export function mapAuthError(
       return { message: labels.invalidCredentials, field: 'email', error: new Error(labels.invalidCredentials) };
     }
 
+    if (mode === 'login' && status === 403) {
+      return { message: labels.confirmEmail, error: new Error(labels.confirmEmail) };
+    }
+
     if (mode === 'register' && status === 409) {
       return { message: labels.accountExists, error: new Error(labels.accountExists) };
     }
