@@ -19,6 +19,7 @@ export function ForgotPassword({
   style,
   title,
   submitButtonText,
+  getCaptchaToken,
 }: ForgotPasswordProps) {
   const labels = resolveLabels(labelOverrides);
   const errorId = useId();
@@ -61,13 +62,14 @@ export function ForgotPassword({
 
     try {
       const linkOrigin = resolveLinkOrigin(linkOriginProp);
+      const captchaToken = getCaptchaToken ? await getCaptchaToken() : undefined;
       if (authApi?.forgotPassword) {
         await authApi.forgotPassword(trimmed, linkOrigin);
       } else {
         const origin = resolveAccountOrigin(accountApiUrl, apiUrl);
         await axios.post(
           accountEndpoint(origin, '/account/forgot-password'),
-          { email: trimmed, linkOrigin },
+          { email: trimmed, linkOrigin, ...(captchaToken ? { captchaToken } : {}) },
           { signal: controller.signal },
         );
       }

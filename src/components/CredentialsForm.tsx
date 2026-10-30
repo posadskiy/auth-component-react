@@ -38,6 +38,7 @@ export function CredentialsForm(props: CredentialsFormProps) {
     title,
     submitButtonText,
     linkOrigin: linkOriginProp,
+    getCaptchaToken,
   } = props;
 
   const labels = resolveLabels(labelOverrides);
@@ -158,7 +159,8 @@ export function CredentialsForm(props: CredentialsFormProps) {
           throw new Error('Either apiUrl or authApi.register must be provided');
         }
         const linkOrigin = resolveLinkOrigin(linkOriginProp);
-        const payload = { email: trimmedEmail, password, linkOrigin };
+        const captchaToken = getCaptchaToken ? await getCaptchaToken() : undefined;
+        const payload = { email: trimmedEmail, password, linkOrigin, ...(captchaToken ? { captchaToken } : {}) };
         const response = authApi?.register
           ? await authApi.register(payload.email, payload.password, payload.linkOrigin)
           : (

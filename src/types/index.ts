@@ -46,7 +46,8 @@ export type { OAuthProvider } from '../oauth/providerIds';
 export type OAuthProviderOption = OAuthProvider | { id: OAuthProvider; label?: string };
 
 export interface AuthApi {
-  login: (email: string, password: string, linkOrigin: string) => Promise<AuthResponse>;
+  /** Used when `apiUrl` is omitted. Password login posts through `apiUrl` when that is set. */
+  login?: (email: string, password: string, linkOrigin: string) => Promise<AuthResponse>;
   register?: (email: string, password: string, linkOrigin: string) => Promise<RegisterResponse>;
   forgotPassword?: (email: string, linkOrigin: string) => Promise<void>;
   resetPassword?: (token: string, password: string) => Promise<void>;
@@ -83,6 +84,8 @@ export interface AuthComponentProps {
    * Defaults to the origin of `apiUrl`.
    */
   accountApiUrl?: string;
+  /** When set, signup and password reset include the returned token as `captchaToken`. */
+  getCaptchaToken?: () => Promise<string | undefined>;
 }
 
 export interface LoginProps extends AuthComponentProps {
@@ -106,6 +109,7 @@ export interface ForgotPasswordProps {
   style?: CSSProperties;
   title?: string;
   submitButtonText?: string;
+  getCaptchaToken?: () => Promise<string | undefined>;
 }
 
 export interface ResetPasswordProps {
