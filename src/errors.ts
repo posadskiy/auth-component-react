@@ -7,7 +7,7 @@ export interface MappedAuthError {
   error: Error;
 }
 
-function readServerMessage(data: unknown): string | undefined {
+export function readServerMessage(data: unknown): string | undefined {
   if (typeof data === 'string' && data.trim()) return data.trim();
   if (!data || typeof data !== 'object') return undefined;
   const record = data as Record<string, unknown>;
@@ -16,6 +16,12 @@ function readServerMessage(data: unknown): string | undefined {
     if (typeof value === 'string' && value.trim()) return value.trim();
   }
   return undefined;
+}
+
+/** Login returns 400 "Captcha is required" after repeated wrong passwords on one account. */
+export function captchaIsRequired(error: unknown): boolean {
+  if (!axios.isAxiosError(error) || error.response?.status !== 400) return false;
+  return readServerMessage(error.response.data) === 'Captcha is required';
 }
 
 export function mapAuthError(

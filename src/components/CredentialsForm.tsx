@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Alert, Anchor, Divider, Paper, PasswordInput, Stack, Text, TextInput, Title, Button } from '@mantine/core';
 import axios from 'axios';
-import { mapAuthError } from '../errors';
+import { captchaIsRequired, mapAuthError } from '../errors';
 import { resolveLabels } from '../labels';
 import { resolveLinkOrigin } from '../linkOrigin';
 import { resolveProviders } from '../oauth/resolveProviders';
@@ -142,15 +142,23 @@ export function CredentialsForm(props: CredentialsFormProps) {
           throw new Error('Either apiUrl or authApi.login must be provided');
         }
         const linkOrigin = resolveLinkOrigin(linkOriginProp);
-        const response = authApi?.login
-          ? await authApi.login(trimmedEmail, password, linkOrigin)
-          : (
-              await axios.post<AuthResponse>(
-                apiUrl as string,
-                { email: trimmedEmail, password, linkOrigin },
-                { signal: controller.signal },
-              )
-            ).data;
+        const login = async (captchaToken?: string) => {
+          const payload = { email: trimmedEmail, password, linkOrigin, ...(captchaToken ? { captchaToken } : {}) };
+          return authApi?.login
+            ? authApi.login(payload.email, payload.password, payload.linkOrigin, captchaToken)
+            : (
+                await axios.post<AuthResponse>(apiUrl as string, payload, { signal: controller.signal })
+              ).data;
+        };
+        let response: AuthResponse;
+        try {
+          response = await login();
+        } catch (error) {
+          if (!getCaptchaToken || !captchaIsRequired(error)) throw error;
+          const captchaToken = await getCaptchaToken();
+          if (!captchaToken) throw error;
+          response = await login(captchaToken);
+        }
         if (!mountedRef.current) return;
         if (!isAuthResponse(response)) throw new Error(labels.genericError);
         props.onSuccess?.(response);

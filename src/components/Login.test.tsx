@@ -229,6 +229,45 @@ describe('Login', () => {
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
   });
 
+  it('sends a captcha token only after auth-service asks for one', async () => {
+    const user = userEvent.setup();
+    const getCaptchaToken = vi.fn().mockResolvedValue('turnstile-token');
+    post
+      .mockRejectedValueOnce({
+        isAxiosError: true,
+        message: 'Request failed with status code 400',
+        response: { status: 400, data: { message: 'Captcha is required' } },
+      })
+      .mockResolvedValueOnce({
+        data: { access_token: 'access', expires_in: 900, refresh_token: 'refresh', user_id: '1' },
+      });
+    renderLogin({ getCaptchaToken });
+
+    await user.type(screen.getByRole('textbox', { name: /email/i }), 'ada@example.com');
+    await user.type(screen.getByLabelText(/^password/i), 'secret');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    expect(getCaptchaToken).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenNthCalledWith(
+      1,
+      'http://localhost:8100/login',
+      { email: 'ada@example.com', password: 'secret', linkOrigin: window.location.origin },
+      expect.any(Object),
+    );
+    expect(post).toHaveBeenNthCalledWith(
+      2,
+      'http://localhost:8100/login',
+      {
+        email: 'ada@example.com',
+        password: 'secret',
+        linkOrigin: window.location.origin,
+        captchaToken: 'turnstile-token',
+      },
+      expect.any(Object),
+    );
+  });
+
   it('hides the forgot-password link when disabled', () => {
     renderLogin({ showForgotPassword: false });
     expect(screen.queryByRole('button', { name: 'Forgot password?' })).not.toBeInTheDocument();
