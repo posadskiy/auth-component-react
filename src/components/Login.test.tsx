@@ -52,10 +52,13 @@ describe('Login', () => {
     expect(google).toBeDisabled();
 
     await user.click(google);
-    expect(navigation.assign).toHaveBeenCalledTimes(1);
-    expect(navigation.assign).toHaveBeenCalledWith(
-      'http://localhost:8100/oauth2/authorize/apple?return_to=https%3A%2F%2Fapp.example%2Foauth%2Fcallback',
-    );
+    await waitFor(() => expect(navigation.assign).toHaveBeenCalledTimes(1));
+    const assigned = vi.mocked(navigation.assign).mock.calls[0][0] as string;
+    const assignedUrl = new URL(assigned);
+    expect(assignedUrl.origin + assignedUrl.pathname).toBe('http://localhost:8100/oauth2/authorize/apple');
+    expect(assignedUrl.searchParams.get('return_to')).toBe('https://app.example/oauth/callback');
+    expect(assignedUrl.searchParams.get('code_challenge')).toBeTruthy();
+    expect(localStorage.getItem('posadskiy.pkce.verifier')).toBeTruthy();
     expect(axios.post).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled();
   });

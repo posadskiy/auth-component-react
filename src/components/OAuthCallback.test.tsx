@@ -64,7 +64,7 @@ describe('OAuthCallback', () => {
     );
     expect(axios.post).toHaveBeenCalledWith(
       'http://localhost:8100/oauth2/finalize',
-      { code: 'abc' },
+      { code: 'abc', codeVerifier: null },
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(window.location.pathname).toBe('/home');

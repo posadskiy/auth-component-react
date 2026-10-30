@@ -1,5 +1,6 @@
 import { navigation } from '../navigation';
 import type { OAuthProvider } from '../types';
+import { createPkceVerifier, pkceChallenge, rememberPkceVerifier } from './pkce';
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 
@@ -30,10 +31,16 @@ export function assertSafeAuthorizationUri(uri: string, allowedHosts?: string[])
   return url;
 }
 
-export function buildAuthorizeUrl(oauthApiUrl: string, provider: OAuthProvider, returnTo: string): string {
+export function buildAuthorizeUrl(
+  oauthApiUrl: string,
+  provider: OAuthProvider,
+  returnTo: string,
+  codeChallenge: string,
+): string {
   const base = oauthApiUrl.replace(/\/$/, '');
   const url = new URL(`${base}/oauth2/authorize/${provider}`);
   url.searchParams.set('return_to', returnTo);
+  url.searchParams.set('code_challenge', codeChallenge);
   return url.toString();
 }
 
@@ -72,24 +79,28 @@ export function resolveOAuthReturnTo(returnTo?: string, allowedReturnToHosts?: s
   return url.toString();
 }
 
-export function beginOAuthAuthorization(options: {
+export async function beginOAuthAuthorization(options: {
   provider: OAuthProvider;
   oauthApiUrl?: string;
   oauthReturnTo?: string;
   allowedOAuthHosts?: string[];
   allowedReturnToHosts?: string[];
-}): void {
+}): Promise<void> {
   const { provider, oauthApiUrl, oauthReturnTo, allowedOAuthHosts, allowedReturnToHosts } = options;
 
   if (!oauthApiUrl) {
     throw new Error('oauthApiUrl must be provided for OAuth');
   }
 
+  const verifier = createPkceVerifier();
+  const challenge = await pkceChallenge(verifier);
   const url = buildAuthorizeUrl(
     oauthApiUrl,
     provider,
     resolveOAuthReturnTo(oauthReturnTo, allowedReturnToHosts),
+    challenge,
   );
   assertSafeAuthorizationUri(url, allowedOAuthHosts);
+  rememberPkceVerifier(verifier);
   navigation.assign(url);
 }

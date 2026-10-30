@@ -24,21 +24,19 @@ export function useOAuthAction(options: {
     setError(null);
     setActiveProvider(provider);
 
-    try {
-      beginOAuthAuthorization({
-        provider,
-        oauthApiUrl: options.oauthApiUrl,
-        oauthReturnTo: options.oauthReturnTo,
-        allowedOAuthHosts: options.allowedOAuthHosts,
-        allowedReturnToHosts: options.allowedReturnToHosts,
-      });
-    } catch (caught) {
+    void beginOAuthAuthorization({
+      provider,
+      oauthApiUrl: options.oauthApiUrl,
+      oauthReturnTo: options.oauthReturnTo,
+      allowedOAuthHosts: options.allowedOAuthHosts,
+      allowedReturnToHosts: options.allowedReturnToHosts,
+    }).catch((caught: unknown) => {
       const mapped = mapAuthError(caught, 'oauth', options.labels);
       setError(mapped.message);
       options.onError?.(mapped.error);
       pendingRef.current = false;
       setActiveProvider(null);
-    }
+    });
   };
 
   return { activeProvider, error, start };

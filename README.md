@@ -85,7 +85,7 @@ OAuth does not derive its base URL from `apiUrl`. Pass `oauthApiUrl`. A provider
 
 ### OAuth callback
 
-Mount this on the URL you passed as `oauthReturnTo`. The auth host redirects there with `?code=` after it has checked state. The component posts `{ code }` to `${oauthApiUrl}/oauth2/finalize` and expects `{ access_token, refresh_token, user_id }`.
+Mount this on the URL you passed as `oauthReturnTo`. The auth host redirects there with `?code=` after it has checked state. The component posts `{ code, codeVerifier }` to `${oauthApiUrl}/oauth2/finalize` and expects `{ access_token, refresh_token, user_id }`.
 
 ```tsx
 <OAuthCallback

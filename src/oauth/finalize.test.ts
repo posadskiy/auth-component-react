@@ -33,7 +33,7 @@ describe('subscribeFinalize', () => {
     expect(axios.post).toHaveBeenCalledTimes(1);
     expect(axios.post).toHaveBeenCalledWith(
       'http://localhost:8100/oauth2/finalize',
-      { code: 'code' },
+      { code: 'code', codeVerifier: null },
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
 
