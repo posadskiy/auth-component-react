@@ -3,6 +3,20 @@ export { Register } from './components/Register';
 export { ForgotPassword } from './components/ForgotPassword';
 export { ResetPassword } from './components/ResetPassword';
 export { OAuthCallback } from './components/OAuthCallback';
+export {
+  listSessions,
+  revokeSession,
+  changePassword,
+  setPassword,
+  changeEmail,
+  listIdentities,
+  unlinkIdentity,
+  listPasskeys,
+  deletePasskey,
+  exportAccount,
+  eraseAccount,
+} from './account/api';
+export type { AccountSession, AccountIdentity, AccountPasskey } from './account/api';
 export type { AuthLabels } from './labels';
 export type {
   AuthResponse,
